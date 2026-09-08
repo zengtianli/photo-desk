@@ -5,8 +5,8 @@ origin: own
 lifecycle: active
 form: mac
 domain: apps-mac
-function: iCloud 照片整理；全部照片浏览与放大、确认后手动删除、分类相册、截图票据、本地 OCR 敏感保护、空标题补充和相同指纹核对。
-summary: SwiftUI 界面与自包含 osxphotos 引擎；计划预览后按勾选项写入，Cloud GUID 对账，无自动删除。
+function: 自动建立个人、猫、人物及会议工作时间线；关联照片与资料，增量本机内容识别，重复照片保留建议和预选清理。
+summary: 启动即全库归集并后台增量识别；本地时间线直接浏览，重复建议自动勾选，最终删除显式确认。
 icon:
   glyph: photo.stack
   color: '#168B83'
@@ -16,6 +16,7 @@ key_scripts:
   - Sources/ContentView.swift
   - Sources/BackendClient.swift
   - backend/bridge.py
+  - backend/journey.py
   - scripts/build_engine.sh
   - scripts/vendor_engine.py
 depends_on: []

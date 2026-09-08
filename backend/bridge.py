@@ -210,8 +210,8 @@ def build_plan(request, cfg):
     return plan
 
 
-def persist_plan(kind, library, records, examined, warnings):
-    token = str(uuid.uuid4())
+def persist_plan(kind, library, records, examined, warnings, token=None):
+    token = token or str(uuid.uuid4())
     path = ROOT / 'plans' / f'{token}.json'
     csv_path = path.with_suffix('.csv')
     fields = ('cloud_guid', 'filename', 'date', 'action', 'target', 'note')
@@ -375,6 +375,9 @@ def main():
                 if 'invoice' not in text.lower() or '100' not in text:
                     raise RuntimeError('内置 OCR 样本核对失败。')
                 data = {'message': 'Apple Vision OCR 合成样本核对通过'}
+            elif command in ('journey-snapshot', 'journey-enrich'):
+                import journey
+                data = journey.run(request, cfg=config(request), api=sys.modules[__name__])
             elif command == 'history':
                 entries = []
                 for path in sorted((ROOT / 'plans').glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True)[:30]:

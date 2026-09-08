@@ -3,7 +3,19 @@ import AppKit
 
 @MainActor
 final class PhotoDeskModel: ObservableObject {
-    @Published var page: Page = .overview
+    @Published var page: Page = .journey
+    @Published var journey: JourneyResult?
+    @Published var activeEvent: JourneyEvent?
+    @Published var track = "全部"
+    @Published var eventSearch = ""
+    @Published var eventLimit = 60
+    @Published var organizing = false
+    @Published var automaticEnabled = false
+    @Published var organizationStatus = "正在联系图库中的照片…"
+    @Published var organizationError: String?
+    private var automation: Task<Void, Never>?
+    private var automationStarted = false
+    private let organizer = BackendClient()
     @Published var summary: LibrarySummary?
     @Published var plans: [Page: PhotoPlan] = [:]
     @Published var selected: Set<String> = []
@@ -40,10 +52,13 @@ final class PhotoDeskModel: ObservableObject {
 
     func navigate(_ target: Page) {
         guard !busy else { return }
-        page = target; group = "全部"; search = ""; pageNumber = 0
+        page = target; group = "全部"; search = ""; pageNumber = 0; activeEvent = nil
         selected = []
+        if target == .duplicates { selected = Set(plans[.duplicates]?.rows.filter { $0.recommended == true }.map(\.id) ?? []) }
         if target == .history { loadHistory() }
+        if target == .overview && summary == nil { refresh() }
         if target == .library && plans[target] == nil { generate() }
+        if [.classify, .triage, .sensitive, .title].contains(target) && plans[target] == nil { generate() }
     }
     private func request(_ command: String, extra: [String: Any] = [:]) -> [String: Any] {
         var result: [String: Any] = ["command": command, "library": library, "request_id": requestID]
@@ -72,12 +87,14 @@ final class PhotoDeskModel: ObservableObject {
     }
     func cancel() { guard !applying else { return }; task?.cancel() }
     func refresh() {
+        startAutomation(restart: true)
         perform("正在读取图库…") {
             let result = try await self.client.execute(LibrarySummary.self, request: self.request("audit"))
             self.summary = result; self.status = "已读取 \(result.total.formatted()) 项个人照片与视频"
         }
     }
     func generate() {
+        if page == .duplicates { selected = []; plans[.duplicates] = nil; startAutomation(restart: true); return }
         let target = page
         perform(target.usesOCR ? "正在本地识别…" : "正在生成整理建议…") {
             let result = try await self.client.execute(PhotoPlan.self, request: self.request("plan", extra: ["kind": target.rawValue, "limit": self.ocrLimit]))
@@ -86,6 +103,7 @@ final class PhotoDeskModel: ObservableObject {
         }
     }
     func checkBeforeApply() {
+        pauseAutomation()
         guard let plan, !selected.isEmpty else { return }
         perform("正在核对所选照片…") {
             _ = try await self.client.execute(ApplyResult.self, request: self.request("apply", extra: ["plan_id": plan.id, "selected": Array(self.selected), "confirmed": false]))
@@ -100,6 +118,7 @@ final class PhotoDeskModel: ObservableObject {
         }
     }
     func checkBeforeDelete() {
+        pauseAutomation()
         guard let plan, !selected.isEmpty else { return }
         let chosen = Array(selected)
         perform("正在核对待删除照片…") {
@@ -119,6 +138,7 @@ final class PhotoDeskModel: ObservableObject {
             guard Set(current.items.map(\.uuid)) == Set(preview.items.map(\.uuid)) else { throw NativePhotos.fail("所选照片发生变化，请重新查看后确认。") }
             let outcome = try await NativePhotos.delete(current.items, recordRoot: Self.dataRoot)
             self.plans = [:]; self.selected = []; self.pendingDeletion = nil
+            self.activeEvent = nil
             // A successful deletion must not be relabeled as failed if a subsequent read fails.
             self.summary = try? await self.client.execute(LibrarySummary.self, request: self.request("audit"))
             if self.page == .library {
@@ -126,6 +146,7 @@ final class PhotoDeskModel: ObservableObject {
             }
             self.pageNumber = 0
             self.status = outcome.verified ? "已删除并核对 \(outcome.count) 张照片，可在“照片 → 最近删除”中恢复" : "系统已完成删除，图库刷新核对尚未完成，请稍后刷新"
+            self.startAutomation(restart: true)
         }
     }
     func createFixture() {
@@ -162,7 +183,8 @@ final class PhotoDeskModel: ObservableObject {
         if panel.runModal() == .OK, let url = panel.url {
             guard url.pathExtension == "photoslibrary" else { error = "请选择 .photoslibrary 图库。"; return }
             library = url.path; UserDefaults.standard.set(library, forKey: "library")
-            summary = nil; plans = [:]; selected = []; page = .overview; refresh()
+            pauseAutomation(); journey = nil; activeEvent = nil
+            summary = nil; plans = [:]; selected = []; page = .journey; refresh()
         }
     }
     func exportCSV() {
@@ -180,4 +202,54 @@ final class PhotoDeskModel: ObservableObject {
     func openPhotos() { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Photos.app")) }
     func openPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!) }
     func openPhotosPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!) }
+
+    var events: [JourneyEvent] {
+        (journey?.events ?? []).filter { event in
+            (track == "全部" || event.tracks.contains(track)) &&
+            (eventSearch.isEmpty || ([event.title, event.date, event.place] + event.people + event.evidence).contains { $0.localizedCaseInsensitiveContains(eventSearch) })
+        }
+    }
+    func openEvent(_ event: JourneyEvent) {
+        guard let journey else { return }
+        activeEvent = event; plans[.journey] = journey.plan; page = .journey
+        group = event.group; search = ""; selected = []; pageNumber = 0
+    }
+    func pauseAutomation() {
+        automation?.cancel(); automation = nil; organizing = false; automaticEnabled = false
+        organizationStatus = "自动整理已暂停，已有结果仍可浏览"
+    }
+    func startAutomation(restart: Bool = false) {
+        if automationStarted && !restart { return }
+        automationStarted = true; automation?.cancel(); organizationError = nil
+        automaticEnabled = true
+        let chosenLibrary = library
+        automation = Task {
+            organizing = true
+            var command = "journey-snapshot"
+            while !Task.isCancelled {
+                do {
+                    let result = try await organizer.execute(JourneyResult.self, request: ["command": command, "library": chosenLibrary, "limit": 24])
+                    guard !Task.isCancelled, chosenLibrary == library else { return }
+                    journey = result
+                    if status == "准备连接你的照片图库" { status = "已自动归集 \(result.total.formatted()) 项照片与视频" }
+                    if activeEvent == nil { plans[.journey] = result.plan }
+                    if page != .duplicates || plans[.duplicates] == nil || (command == "journey-snapshot" && selected.isEmpty) {
+                        plans[.duplicates] = result.duplicates
+                        if page == .duplicates { selected = Set(result.duplicates.rows.filter { $0.recommended == true }.map(\.id)) }
+                    }
+                    organizationStatus = result.pending > 0
+                        ? "已联系 \(result.total.formatted()) 张照片 · 内容识别 \(result.analyzed.formatted()) / \(result.total.formatted())；可以边看边整理"
+                        : "全部照片已归集 · 新照片每分钟自动检查；内容识别缺失 \(result.unavailable) 项，失败 \(result.failed) 项"
+                    organizing = result.pending > 0
+                    command = result.pending > 0 ? "journey-enrich" : "journey-snapshot"
+                    try await Task.sleep(for: result.pending > 0 ? .milliseconds(300) : .seconds(60))
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    organizing = false; automaticEnabled = false; organizationError = error.localizedDescription
+                    organizationStatus = "本轮自动整理中断，已有结果保留；点击重试继续"
+                    return
+                }
+            }
+        }
+    }
 }

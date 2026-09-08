@@ -17,16 +17,30 @@ struct ContentView: View {
                     }
                 }.padding(.horizontal, 20).padding(.top, 25)
                 VStack(spacing: 5) {
-                    ForEach(Page.allCases) { page in
-                        Button { model.navigate(page) } label: {
+                    ForEach([Page.journey, .library, .duplicates, .overview, .history]) { page in
+                        Button { model.navigate(page); if page == .journey { model.track = "全部" } } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: page.symbol).font(.system(size: 16)).frame(width: 22)
                                 Text(page.name).font(.system(size: 14, weight: model.page == page ? .semibold : .regular))
                                 Spacer()
                             }.padding(.horizontal, 14).padding(.vertical, 11)
-                                .foregroundStyle(model.page == page ? accent : .primary)
-                                .background(model.page == page ? accent.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 9))
+                                .foregroundStyle(model.page == page && (page != .journey || model.track == "全部") ? accent : .primary)
+                                .background(model.page == page && (page != .journey || model.track == "全部") ? accent.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 9))
                         }.buttonStyle(.plain).disabled(model.busy)
+                        if page == .journey {
+                            ForEach(["猫时间线", "会议与工作", "资料与截图"], id: \.self) { track in
+                                Button {
+                                    model.navigate(.journey); model.track = track
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: track == "猫时间线" ? "cat" : track == "会议与工作" ? "person.3" : "doc.text").frame(width: 22)
+                                        Text(track).font(.system(size: 14)); Spacer()
+                                    }.padding(.horizontal, 14).padding(.vertical, 11)
+                                        .foregroundStyle(model.page == .journey && model.track == track ? accent : .primary)
+                                        .background(model.page == .journey && model.track == track ? accent.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 9))
+                                }.buttonStyle(.plain).disabled(model.busy)
+                            }
+                        }
                     }
                 }.padding(.horizontal, 12)
                 Spacer()
@@ -43,6 +57,7 @@ struct ContentView: View {
                 if let error = model.error { errorBanner(error) }
                 Group {
                     switch model.page {
+                    case .journey: journeyArea
                     case .overview: overview
                     case .history: history
                     default: planArea
@@ -75,11 +90,11 @@ struct ContentView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 7) {
-                Text(model.page.name).font(.system(size: 28, weight: .bold))
+                Text(model.page == .journey && model.track != "全部" ? model.track : model.page.name).font(.system(size: 28, weight: .bold))
                 Text(model.page.detail).font(.callout).foregroundStyle(.secondary)
             }
             Spacer(minLength: 15)
-            if ![Page.overview, .history].contains(model.page) {
+            if ![Page.journey, .overview, .history].contains(model.page) {
                 Button(model.page == .library ? "刷新照片" : (model.plan == nil ? "生成建议" : "重新分析"), systemImage: model.page == .library ? "arrow.clockwise" : "sparkles") { model.generate() }
                     .buttonStyle(.borderedProminent).controlSize(.large).disabled(model.busy)
             }
@@ -178,6 +193,67 @@ struct ContentView: View {
         }
     }
 
+    private var journeyArea: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                if model.organizing { ProgressView().controlSize(.small) }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(model.organizationStatus).font(.callout)
+                    if let error = model.organizationError { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+                    if let j = model.journey {
+                        Text("覆盖 \(j.albums) 个已有相册 · \(j.events.count.formatted()) 个生活片段 · 包含共享内容（只读）")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button(model.automaticEnabled ? "暂停自动整理" : "继续自动整理") {
+                    if model.automaticEnabled { model.pauseAutomation() } else { model.startAutomation(restart: true) }
+                }.disabled(model.busy)
+            }.padding(.horizontal, 28).padding(.bottom, 15)
+            if let event = model.activeEvent, let plan = model.plan {
+                HStack {
+                    Button("返回时间线", systemImage: "arrow.left") { model.activeEvent = nil; model.selected = []; model.group = "全部" }
+                    Text(event.title).font(.headline)
+                    Text("\(event.count) 张 · \(event.date)").font(.caption).foregroundStyle(.secondary)
+                }.padding(.horizontal, 28).padding(.bottom, 8)
+                planBrowser(plan, showGroups: false)
+            } else {
+                HStack(spacing: 12) {
+                    Picker("时间线", selection: $model.track) {
+                        ForEach(["全部", "个人时间线", "猫时间线", "会议与工作", "资料与截图"], id: \.self) { Text($0).tag($0) }
+                        ForEach((model.journey?.tracks ?? []).filter { $0.hasPrefix("猫 · ") || $0.hasPrefix("人物 · ") }, id: \.self) { Text($0).tag($0) }
+                    }.frame(maxWidth: 240)
+                    TextField("查找人物、地点、日期或事件", text: $model.eventSearch).textFieldStyle(.roundedBorder)
+                    Button {
+                        model.navigate(.duplicates)
+                    } label: {
+                        let rows = model.journey?.duplicates.rows ?? []
+                        Text("重复核对 \(rows.filter { $0.recommended == true }.count) 项建议删除")
+                    }.buttonStyle(.borderedProminent).disabled(model.journey == nil || model.busy)
+                }.padding(.horizontal, 28).padding(.bottom, 12)
+                if model.journey == nil {
+                    ContentUnavailableView("正在联系你的照片", systemImage: "sparkles", description: Text("先按时间、人物与已有相册归集，随后在后台补充内容识别。无需逐项启动。"))
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 16)], alignment: .leading, spacing: 16) {
+                            ForEach(Array(model.events.prefix(model.eventLimit))) { event in
+                                JourneyCard(event: event) { model.openEvent(event) }
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .topLeading)
+                        if model.events.isEmpty {
+                            ContentUnavailableView("暂未找到匹配片段", systemImage: "magnifyingglass", description: Text("可调整筛选；后台识别完成后会自动补充。"))
+                        }
+                        if model.events.count > model.eventLimit {
+                            Button("继续查看更早的片段") { model.eventLimit += 60 }.padding()
+                        }
+                    }.padding(.horizontal, 28)
+                }
+            }
+        }
+        .onChange(of: model.track) { _, _ in model.eventLimit = 60 }
+        .onChange(of: model.eventSearch) { _, _ in model.eventLimit = 60 }
+    }
+
     private func metric(_ label: String, value: Int, symbol: String) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Label(label, systemImage: symbol).font(.caption).foregroundStyle(.secondary)
@@ -216,7 +292,7 @@ struct ContentView: View {
         }
     }
 
-    private func planBrowser(_ plan: PhotoPlan) -> some View {
+    private func planBrowser(_ plan: PhotoPlan, showGroups: Bool = true) -> some View {
         let counts = Dictionary(grouping: plan.rows, by: \.group).mapValues(\.count)
         return VStack(spacing: 0) {
             HStack(spacing: 14) {
@@ -225,6 +301,7 @@ struct ContentView: View {
                 Button("导出清单") { model.exportCSV() }.disabled(model.busy)
             }.padding(.horizontal, 28).padding(.vertical, 12)
             HStack(spacing: 0) {
+                if showGroups {
                 ScrollView {
                     VStack(spacing: 3) {
                         groupButton("全部", count: plan.rows.count)
@@ -234,13 +311,14 @@ struct ContentView: View {
                     }.padding(10)
                 }.frame(width: 185)
                 Divider()
+                }
                 ScrollView {
                     if model.filteredRows.isEmpty {
                         ContentUnavailableView("没有匹配照片", systemImage: "magnifyingglass", description: Text("清空搜索或选择其他月份后再查看。"))
                     }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 14)], spacing: 14) {
                         ForEach(model.visibleRows) { row in
-                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: false, enlarge: { model.enlargedPhoto = row }) {
+                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: row.readOnly == true, enlarge: { model.enlargedPhoto = row }) {
                                 if model.selected.contains(row.id) { model.selected.remove(row.id) } else { model.selected.insert(row.id) }
                             }.disabled(model.busy)
                         }
@@ -249,7 +327,7 @@ struct ContentView: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
             HStack(spacing: 12) {
-                Button("勾选筛选结果") { model.selected.formUnion(model.filteredRows.map(\.id)) }.disabled(model.busy)
+                Button("勾选筛选结果") { model.selected.formUnion(model.filteredRows.filter { $0.readOnly != true }.map(\.id)) }.disabled(model.busy)
                 Button("清空勾选") { model.selected = [] }.disabled(model.busy)
                 Spacer()
                 Button { model.pageNumber -= 1 } label: { Image(systemName: "chevron.left") }.disabled(model.pageNumber == 0)
@@ -312,7 +390,7 @@ struct ContentView: View {
             }.frame(maxHeight: 250)
             HStack {
                 Spacer()
-                Button("取消", role: .cancel) { model.confirmDelete = false; model.pendingDeletion = nil; model.status = "已取消删除，照片未改动" }
+                Button("取消", role: .cancel) { model.confirmDelete = false; model.pendingDeletion = nil; model.status = "已取消删除，照片未改动"; model.startAutomation(restart: true) }
                 Button("确认删除", role: .destructive) { model.deleteSelected() }.buttonStyle(.borderedProminent).tint(.red)
             }
         }.padding(28).frame(width: 580).interactiveDismissDisabled()
@@ -336,6 +414,39 @@ struct ContentView: View {
                 }.listStyle(.inset)
             }
         }.padding(.horizontal, 28).padding(.bottom, 20)
+    }
+}
+
+private struct JourneyCard: View {
+    let event: JourneyEvent
+    let open: () -> Void
+    @State private var image: NSImage?
+    var body: some View {
+        Button(action: open) {
+            VStack(alignment: .leading, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 9).fill(Color.secondary.opacity(0.08))
+                    if let image { Image(nsImage: image).resizable().scaledToFill() }
+                    else { Image(systemName: "photo.stack").font(.largeTitle).foregroundStyle(.secondary) }
+                }.frame(height: 155).clipped().clipShape(RoundedRectangle(cornerRadius: 9))
+                HStack { Text(event.date).font(.caption).foregroundStyle(.secondary); Spacer(); Text("\(event.count) 张").font(.caption.bold()).foregroundStyle(accent) }
+                Text(event.title).font(.headline).lineLimit(2)
+                Text(event.evidence.isEmpty ? "按同日拍摄顺序联系，内容识别继续补充" : event.evidence.joined(separator: " · "))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(3).frame(height: 43, alignment: .topLeading)
+                Label("查看这个片段", systemImage: "arrow.right").font(.caption).foregroundStyle(accent)
+            }.padding(13).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
+                .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.primary.opacity(0.07)))
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain)
+        .task(id: event.cover.previewPath) {
+            let path = event.cover.previewPath
+            let cg = await Task.detached(priority: .utility) { () -> CGImage? in
+                guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else { return nil }
+                return CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 640, kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary)
+            }.value
+            if let cg, !Task.isCancelled { image = NSImage(cgImage: cg, size: .zero) }
+        }
     }
 }
 
@@ -364,6 +475,7 @@ private struct PhotoTile: View {
                 Text(row.filename).font(.caption.weight(.semibold)).lineLimit(1)
                 Text(String(row.date.prefix(10))).font(.caption2).foregroundStyle(.secondary)
                 Text(row.target).font(.caption).foregroundStyle(accent).lineLimit(2)
+                if row.readOnly == true { Label("共享内容 · 只读", systemImage: "icloud").font(.caption2).foregroundStyle(.secondary) }
                 if !row.protected.isEmpty { Label(row.protected, systemImage: "lock.fill").font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
                 if !row.note.isEmpty { Text(row.note).font(.caption2).foregroundStyle(.secondary).lineLimit(3) }
                 Spacer(minLength: 0)

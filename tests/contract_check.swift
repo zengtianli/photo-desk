@@ -14,5 +14,14 @@ struct Check {
             print(kind, plan.rows.count, "rows decoded")
         }
         print("Actual GUI decoder contracts passed; library items:", audit.total)
+        let journeyURL = root.appendingPathComponent("journey-enrich.json")
+        if FileManager.default.fileExists(atPath: journeyURL.path) {
+            let journey = try Contract.decode(JourneyResult.self, from: Data(contentsOf: journeyURL))
+            precondition(journey.total == journey.plan.rows.count)
+            precondition(journey.total == journey.events.reduce(0) { $0 + $1.count })
+            precondition(Set(journey.plan.rows.map(\.id)).count == journey.total)
+            precondition(journey.analyzed + journey.pending == journey.total)
+            print("Journey decoded:", journey.total, "photos,", journey.events.count, "events")
+        }
     }
 }

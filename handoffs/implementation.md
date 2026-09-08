@@ -1,5 +1,13 @@
 # PhotoDesk · 2026-09-08
 
+## 当前主线：自动联系照片
+
+用户纠正后，主流程已改为打开即全库归集、自动内容识别、个人/猫/人物/会议时间线与重复预选；不再逐项启动工具。实现 `backend/journey.py`，Swift 主页面 Page.journey，旧写回工具在“整理 → 高级整理”。时间线保存在 PhotoDesk 本地，Apple 相册写回仍显式确认；删除必须用户最终确认。
+
+数据覆盖/性能/保护测试见 `VALIDATION.md` 顶部。本轮新界面实机视觉核验遇桌面连接阻塞（PhotoDesk、Finder 均 cgWindowNotFound），已向用户询问解锁状态。后续优先检查：启动首页、猫筛选、会议筛选、片段展开、重复预选、不同宽度以及暂停/续跑。自动内容识别在后台分批进行，不能把“全库归集完成”说成“全库内容识别完成”。
+
+索引在 Application Support/PhotoDesk/journey/<library-hash>/index.sqlite；latest.json 含真实私有数据。按 UUID、原片指纹/修改时间增量缓存；每次输出重用稳定的计划 ID，不无限生成计划。保留 UI 正在审查的快照，后台不得重置勾选。
+
 用户要求：修复已有相册整理工具，做成 Mac App。已安装 `/Applications/PhotoDesk.app`，源码本仓，bundle `cyou.tianli.PhotoDesk`。
 
 ## 后续补齐：手动删除已安装并实测

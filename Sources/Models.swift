@@ -30,6 +30,8 @@ struct PlanRow: Decodable, Identifiable {
     let originalTitle: String
     let protected: String
     let group: String
+    let recommended: Bool?
+    let readOnly: Bool?
     var actionName: String {
         switch action { case "add-album": return "加入相册"; case "add-keyword": return "添加标签"; case "set-title": return "补充标题"; default: return "人工核对" }
     }
@@ -43,7 +45,7 @@ struct PhotoPlan: Decodable, Identifiable {
     let warnings: [String]
     let csvPath: String
     let rows: [PlanRow]
-    var isReadOnly: Bool { kind == "duplicates" || kind == "library" }
+    var isReadOnly: Bool { ["duplicates", "library", "journey"].contains(kind) }
     var groups: [String] { Array(Set(rows.map(\.group))).sorted(by: kind == "library" ? (>) : (<)) }
 }
 struct ApplyResult: Decodable { let message: String; let changed: Int; let receiptPath: String? }
@@ -54,10 +56,11 @@ struct HistoryResult: Decodable { let entries: [HistoryEntry] }
 struct WorkProgress: Decodable { let message: String; let done: Int; let total: Int }
 
 enum Page: String, CaseIterable, Identifiable {
-    case overview, library, classify, triage, sensitive, title, duplicates, history
+    case journey, overview, library, classify, triage, sensitive, title, duplicates, history
     var id: String { rawValue }
     var name: String {
         switch self {
+        case .journey: return "我的时间线"
         case .overview: return "图库概览"
         case .library: return "全部照片"
         case .classify: return "分类整理"
@@ -70,6 +73,7 @@ enum Page: String, CaseIterable, Identifiable {
     }
     var symbol: String {
         switch self {
+        case .journey: return "sparkles.rectangle.stack"
         case .overview: return "square.grid.2x2"
         case .library: return "photo.on.rectangle"
         case .classify: return "folder.badge.plus"
@@ -82,6 +86,7 @@ enum Page: String, CaseIterable, Identifiable {
     }
     var detail: String {
         switch self {
+        case .journey: return "把生活、猫咪和工作中的照片联系起来；打开即自动整理，新照片持续归入。"
         case .overview: return "看看照片都在哪里，再开始整理。"
         case .library: return "浏览、放大查看和删除所选照片；按月份分组，最新照片在前。"
         case .classify: return "按年月、人物和场景归入相册，已有分类自动跳过。"
@@ -108,6 +113,17 @@ struct DeletionPreview: Decodable {
     let items: [DeletionItem]
 }
 struct DeletionOutcome { let count: Int; let verified: Bool }
+
+struct JourneyEvent: Decodable, Identifiable {
+    let id: String; let title: String; let group: String; let date: String; let endDate: String
+    let count: Int; let tracks: [String]; let people: [String]; let place: String
+    let evidence: [String]; let cover: PlanRow
+}
+struct JourneyResult: Decodable {
+    let library: String; let generated: String; let total: Int; let analyzed: Int
+    let pending: Int; let unavailable: Int; let failed: Int; let albums: Int
+    let events: [JourneyEvent]; let tracks: [String]; let plan: PhotoPlan; let duplicates: PhotoPlan
+}
 
 enum Contract {
     static func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
