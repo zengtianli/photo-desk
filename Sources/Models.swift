@@ -27,6 +27,8 @@ struct PlanRow: Decodable, Identifiable {
     let target: String
     let note: String
     let previewPath: String
+    let originalPath: String?
+    let isMovie: Bool?
     let originalTitle: String
     let protected: String
     let group: String

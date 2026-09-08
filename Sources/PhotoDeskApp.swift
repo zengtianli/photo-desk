@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = "请等待写入和核对完成后再退出。"; alert.runModal()
             return .terminateCancel
         }
-        model?.cancel(); model?.pauseAutomation(); return .terminateNow
+        model?.cancel(); model?.pauseAutomation(); model?.stopProductControls(); return .terminateNow
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -34,6 +34,20 @@ struct PhotoDeskApp: App {
             }
         }.defaultSize(width: 1180, height: 800)
             .commands {
+                CommandGroup(replacing: .appSettings) {
+                    SettingsLink { Text("设置…") }.keyboardShortcut(",")
+                }
+                CommandMenu("照片") {
+                    Button("快速预览所选照片") { model.togglePreview() }.disabled(!model.canPreview && model.enlargedPhoto == nil)
+                    Button("下一张") { model.movePhoto(1) }.disabled(!model.photoGridVisible)
+                    Button("上一张") { model.movePhoto(-1) }.disabled(!model.photoGridVisible)
+                    Divider()
+                    Button("全选筛选结果") { model.selectAllPhotos() }.disabled(!model.photoGridVisible || model.busy)
+                    Button("取消选择") { model.selected = []; model.focusedPhotoID = nil }.disabled(model.selected.isEmpty)
+                    Button("搜索照片") { model.performAction(.search) }.keyboardShortcut("f")
+                    Divider()
+                    Button("删除所选照片…") { model.performAction(.delete) }.keyboardShortcut(.delete, modifiers: .command).disabled(model.selected.isEmpty || model.busy || !model.gridFocused)
+                }
                 CommandMenu("整理") {
                     Button("刷新图库") { model.refresh() }.keyboardShortcut("r").disabled(model.busy)
                     Button("选择图库…") { model.chooseLibrary() }.disabled(model.busy)
@@ -47,6 +61,10 @@ struct PhotoDeskApp: App {
                     Divider()
                     Button("导入验收测试图…") { model.confirmFixture = true }.disabled(model.busy)
                 }
+                CommandGroup(replacing: .help) {
+                    SettingsLink { Text("PhotoDesk 使用帮助与快捷键") }
+                }
             }
+        Settings { PhotoSettingsView(model: model, shortcuts: model.shortcuts) }
     }
 }

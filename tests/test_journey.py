@@ -45,6 +45,16 @@ class Connections(unittest.TestCase):
         self.assertEqual([len(b) for b in buckets], [1, 2])
         self.assertEqual(sorted(p.uuid for b in buckets for p, _ in b), sorted(p.uuid for p in photos))
 
+    def test_event_and_meeting_preferences_change_real_grouping(self):
+        photos = [photo(10), photo(12)]
+        entries = [(p, journey.meaning(p, {}, set())) for p in photos]
+        self.assertEqual(len(journey.event_buckets(entries, hours=1)), 2)
+        self.assertEqual(len(journey.event_buckets(entries, hours=3)), 1)
+        a, b = photo(), photo(11)
+        mb = journey.meaning(b, {'labels': {'document': .9}}, set())
+        journey.connect_meeting_material([(a, journey.meaning(a, {'text': '会议议程'}, set())), (b, mb)], minutes=30)
+        self.assertEqual(mb['category'], 'documents')
+
     def test_low_confidence_cat_is_not_a_cat_event(self):
         m = journey.meaning(photo(), {'labels': {'cat': .2}}, set())
         self.assertNotIn('猫时间线', m['tracks'])

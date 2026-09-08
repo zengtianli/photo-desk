@@ -1,11 +1,14 @@
 import SwiftUI
 import AppKit
 import ImageIO
+import AVKit
 
 private let accent = Color(red: 0.06, green: 0.49, blue: 0.46)
 
 struct ContentView: View {
     @ObservedObject var model: PhotoDeskModel
+    @Environment(\.openSettings) private var openSettings
+    @FocusState private var searchFocused: Bool
     var body: some View {
         NavigationSplitView {
             VStack(alignment: .leading, spacing: 24) {
@@ -45,6 +48,7 @@ struct ContentView: View {
                 }.padding(.horizontal, 12)
                 Spacer()
                 VStack(alignment: .leading, spacing: 10) {
+                    SettingsLink { Label("设置…", systemImage: "gearshape") }.buttonStyle(.link)
                     Label("在你的 Mac 上整理", systemImage: "desktopcomputer").font(.caption.weight(.medium))
                     Text("照片和识别结果保存在本机。\n整理先预览，删除由你决定。")
                         .font(.caption).foregroundStyle(.secondary).lineSpacing(4)
@@ -68,6 +72,8 @@ struct ContentView: View {
                 .background(Color(nsColor: .windowBackgroundColor))
         }
         .tint(accent)
+        .preferredColorScheme(model.preferences.colorScheme)
+        .onAppear { model.openSettingsAction = { openSettings() }; model.startProductControls() }
         .toolbar {
             ToolbarItemGroup {
                 Button { model.chooseLibrary() } label: { Label("选择图库", systemImage: "externaldrive") }.disabled(model.busy)
@@ -76,7 +82,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.confirm) { confirmation }
         .sheet(isPresented: $model.confirmDelete) { deletionConfirmation }
-        .sheet(item: $model.enlargedPhoto) { row in LargePhotoPreview(row: row) }
+        .sheet(isPresented: Binding(get: { model.enlargedPhoto != nil }, set: { if !$0 { model.enlargedPhoto = nil } })) {
+            if let row = model.enlargedPhoto { LargePhotoPreview(row: row, previous: { model.movePhoto(-1) }, next: { model.movePhoto(1) }) }
+        }
         .alert("导入一张验收测试图？", isPresented: $model.confirmFixture) {
             Button("取消", role: .cancel) { }
             Button("创建测试图") { model.createFixture() }
@@ -85,6 +93,8 @@ struct ContentView: View {
         }
         .onChange(of: model.group) { _, _ in model.pageNumber = 0 }
         .onChange(of: model.search) { _, _ in model.pageNumber = 0 }
+        .onChange(of: model.searchFocusToken) { _, _ in searchFocused = true }
+        .onChange(of: searchFocused) { _, value in if value { model.gridFocused = false } }
     }
 
     private var header: some View {
@@ -207,7 +217,9 @@ struct ContentView: View {
                 }
                 Spacer()
                 Button(model.automaticEnabled ? "暂停自动整理" : "继续自动整理") {
-                    if model.automaticEnabled { model.pauseAutomation() } else { model.startAutomation(restart: true) }
+                    if model.automaticEnabled { model.pauseAutomation() }
+                    else if !model.preferences.automatic { model.preferences.automatic = true }
+                    else { model.startAutomation(restart: true) }
                 }.disabled(model.busy)
             }.padding(.horizontal, 28).padding(.bottom, 15)
             if let event = model.activeEvent, let plan = model.plan {
@@ -223,7 +235,7 @@ struct ContentView: View {
                         ForEach(["全部", "个人时间线", "猫时间线", "会议与工作", "资料与截图"], id: \.self) { Text($0).tag($0) }
                         ForEach((model.journey?.tracks ?? []).filter { $0.hasPrefix("猫 · ") || $0.hasPrefix("人物 · ") }, id: \.self) { Text($0).tag($0) }
                     }.frame(maxWidth: 240)
-                    TextField("查找人物、地点、日期或事件", text: $model.eventSearch).textFieldStyle(.roundedBorder)
+                    TextField("查找人物、地点、日期或事件", text: $model.eventSearch).textFieldStyle(.roundedBorder).focused($searchFocused)
                     Button {
                         model.navigate(.duplicates)
                     } label: {
@@ -296,7 +308,7 @@ struct ContentView: View {
         let counts = Dictionary(grouping: plan.rows, by: \.group).mapValues(\.count)
         return VStack(spacing: 0) {
             HStack(spacing: 14) {
-                TextField("搜索文件名、日期或建议", text: $model.search).textFieldStyle(.roundedBorder)
+                TextField("搜索文件名、日期或建议", text: $model.search).textFieldStyle(.roundedBorder).focused($searchFocused)
                 Text("\(model.filteredRows.count) 项").font(.caption).foregroundStyle(.secondary)
                 Button("导出清单") { model.exportCSV() }.disabled(model.busy)
             }.padding(.horizontal, 28).padding(.vertical, 12)
@@ -312,24 +324,38 @@ struct ContentView: View {
                 }.frame(width: 185)
                 Divider()
                 }
+                ScrollViewReader { reader in
                 ScrollView {
                     if model.filteredRows.isEmpty {
                         ContentUnavailableView("没有匹配照片", systemImage: "magnifyingglass", description: Text("清空搜索或选择其他月份后再查看。"))
                     }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 14)], spacing: 14) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: model.preferences.thumbnailWidth), spacing: 14)], spacing: 14) {
                         ForEach(model.visibleRows) { row in
-                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: row.readOnly == true, enlarge: { model.enlargedPhoto = row }) {
-                                if model.selected.contains(row.id) { model.selected.remove(row.id) } else { model.selected.insert(row.id) }
-                            }.disabled(model.busy)
+                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: row.readOnly == true, enlarge: {
+                                model.focusedPhotoID = row.id; model.gridFocused = true; model.enlargedPhoto = row
+                            }) {
+                                searchFocused = false
+                                model.selectPhoto(row, modifiers: NSApp.currentEvent?.modifierFlags ?? [])
+                            }.disabled(model.busy).id(row.id)
                         }
                     }.frame(maxWidth: .infinity, alignment: .topLeading).padding(16)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(GeometryReader { proxy in
+                        Color.clear.onAppear { model.updateGridWidth(Double(proxy.size.width)) }
+                            .onChange(of: proxy.size.width) { _, width in model.updateGridWidth(Double(width)) }
+                            .onChange(of: model.preferences.thumbnailWidth) { _, _ in model.updateGridWidth(Double(proxy.size.width)) }
+                    })
+                    .onChange(of: model.navigationScrollToken) { _, _ in
+                        if let id = model.focusedPhotoID { reader.scrollTo(id, anchor: .center) }
+                    }
+                }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
             HStack(spacing: 12) {
-                Button("勾选筛选结果") { model.selected.formUnion(model.filteredRows.filter { $0.readOnly != true }.map(\.id)) }.disabled(model.busy)
+                Button("全选筛选结果") { model.selectAllPhotos() }.disabled(model.busy)
                 Button("清空勾选") { model.selected = [] }.disabled(model.busy)
                 Spacer()
+                Button("快速预览", systemImage: "eye") { model.togglePreview() }.disabled(!model.canPreview).help("空格键预览所选照片")
                 Button { model.pageNumber -= 1 } label: { Image(systemName: "chevron.left") }.disabled(model.pageNumber == 0)
                 Text("\(model.pageNumber + 1) / \(max(1, (model.filteredRows.count + 59) / 60))").font(.caption.monospacedDigit())
                 Button { model.pageNumber += 1 } label: { Image(systemName: "chevron.right") }.disabled((model.pageNumber + 1) * 60 >= model.filteredRows.count)
@@ -348,7 +374,7 @@ struct ContentView: View {
         }
     }
     private func groupButton(_ title: String, count: Int) -> some View {
-        Button { model.group = title } label: {
+        Button { model.group = title; model.gridFocused = false; model.focusedPhotoID = nil; model.selected = [] } label: {
             HStack {
                 Text(title).font(.caption).lineLimit(2).multilineTextAlignment(.leading)
                 Spacer(minLength: 4); Text(count.formatted()).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
@@ -459,7 +485,7 @@ private struct PhotoTile: View {
     @State private var image: NSImage?
     var body: some View {
         VStack(spacing: 0) {
-        Button { if !readOnly { toggle() } } label: {
+        Button { toggle() } label: {
             VStack(alignment: .leading, spacing: 9) {
                 ZStack(alignment: .topTrailing) {
                     ZStack {
@@ -484,6 +510,7 @@ private struct PhotoTile: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(selected ? accent : Color.primary.opacity(0.07), lineWidth: selected ? 2 : 1))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain)
+            .simultaneousGesture(TapGesture(count: 2).onEnded { enlarge() })
             .contextMenu { Button("放大查看", systemImage: "arrow.up.left.and.arrow.down.right") { enlarge() } }
             .help("\(row.filename)\n\(row.actionName)：\(row.target)\n\(row.note)")
             .task(id: row.previewPath) {
@@ -501,27 +528,53 @@ private struct PhotoTile: View {
     }
 }
 
+// Use AppKit's player directly: the macOS 27 beta SwiftUI AVKit overlay
+// aborts while initializing VideoPlayer's generic superclass metadata.
+private struct NativeMoviePreview: NSViewRepresentable {
+    let player: AVPlayer
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .inline
+        view.player = player
+        return view
+    }
+    func updateNSView(_ view: AVPlayerView, context: Context) { view.player = player }
+    static func dismantleNSView(_ view: AVPlayerView, coordinator: ()) {
+        view.player?.pause(); view.player = nil
+    }
+}
+
 private struct LargePhotoPreview: View {
     let row: PlanRow
+    let previous: () -> Void
+    let next: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var image: NSImage?
+    @State private var player: AVPlayer?
     var body: some View {
         VStack(spacing: 14) {
-            HStack { Text(row.filename).font(.headline); Spacer(); Button("关闭") { dismiss() }.keyboardShortcut(.cancelAction) }
-            if let image {
+            HStack { Text(row.filename).font(.headline); Spacer(); Button("上一张", systemImage: "chevron.left", action: previous); Button("下一张", systemImage: "chevron.right", action: next); Button("关闭") { dismiss() }.keyboardShortcut(.cancelAction) }
+            if let player { NativeMoviePreview(player: player).frame(maxWidth: .infinity, maxHeight: .infinity) }
+            else if let image {
                 Image(nsImage: image).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else { ContentUnavailableView("暂无本地预览", systemImage: "photo", description: Text("原片可能未下载，或该视频尚无缩略图。")) }
             Text("\(row.date) · \(row.target)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
             if !row.note.isEmpty { Text(row.note).font(.caption).textSelection(.enabled) }
+            Text("空格 / Esc 关闭 · ← → 查看前后照片").font(.caption).foregroundStyle(.secondary)
         }.padding(20).frame(minWidth: 600, idealWidth: 850, maxWidth: 1100, minHeight: 500, idealHeight: 700, maxHeight: 900)
-            .task {
-                let path = row.previewPath
+            .task(id: row.id) {
+                player?.pause(); player = nil; image = nil
+                if row.isMovie == true, let path = row.originalPath, !path.isEmpty, FileManager.default.fileExists(atPath: path) {
+                    player = AVPlayer(url: URL(fileURLWithPath: path)); return
+                }
+                let path = row.isMovie != true && !(row.originalPath ?? "").isEmpty ? row.originalPath! : row.previewPath
                 let cg = await Task.detached(priority: .utility) { () -> CGImage? in
                     guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else { return nil }
                     return CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 1800, kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary)
                 }.value
-                if let cg { image = NSImage(cgImage: cg, size: .zero) }
+                if let cg, !Task.isCancelled { image = NSImage(cgImage: cg, size: .zero) }
             }
+            .onDisappear { player?.pause() }
     }
 }
 

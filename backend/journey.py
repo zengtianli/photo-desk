@@ -123,7 +123,7 @@ def distance(a, b):
     return 6371 * 2 * math.asin(min(1, math.sqrt(x)))
 
 
-def connect_meeting_material(entries):
+def connect_meeting_material(entries, minutes=90):
     anchors = sorted([(p.date.timestamp(), p, m) for p, m in entries if p.date and m['category'] == 'meetings'], key=lambda a: a[0])
     times = [a[0] for a in anchors]
     for p, m in entries:
@@ -131,15 +131,15 @@ def connect_meeting_material(entries):
             continue
         position = bisect.bisect_left(times, p.date.timestamp())
         for _, anchor, meaning in sorted(anchors[max(0, position-1):position+1], key=lambda a: abs(a[0]-p.date.timestamp())):
-            if abs((p.date-anchor.date).total_seconds()) <= 90*60 and p.date.date() == anchor.date.date() and distance(p.location, anchor.location) <= 1:
+            if abs((p.date-anchor.date).total_seconds()) <= minutes*60 and p.date.date() == anchor.date.date() and distance(p.location, anchor.location) <= 1:
                 m['category'] = 'meetings'; m['title'] = meaning['title']
                 m['tracks'] = list(dict.fromkeys(m['tracks'] + ['会议与工作']))
-                m['evidence'].append('关联同日 90 分钟内的会议线索（时间关联，待核对）')
+                m['evidence'].append(f'关联同日 {minutes} 分钟内的会议线索（时间关联，待核对）')
                 break
     return entries
 
 
-def event_buckets(entries):
+def event_buckets(entries, hours=3, kilometers=8):
     """Same local day, subject, <= 3 h gap, <= 8 km. No invented event names."""
     buckets = []
     last = {}
@@ -150,7 +150,7 @@ def event_buckets(entries):
         if bucket:
             previous = bucket[-1][0]
             gap = (p.date - previous.date).total_seconds() if p.date and previous.date else float('inf')
-            if gap > 3 * 3600 or distance(previous.location, p.location) > 8:
+            if gap > hours * 3600 or distance(previous.location, p.location) > kilometers:
                 bucket = None
         if bucket is None:
             bucket = []; buckets.append(bucket); last[key] = bucket
@@ -216,6 +216,12 @@ def run(request, cfg, api):
     db = api.lib.load_db(cfg.library)
     cfg.raw['library'] = str(db.library_path)
     photos = db.photos()
+    options = request.get('options', {})
+    if not options.get('include_shared', True):
+        photos = [p for p in photos if api.editable(p)]
+    hours = max(1, min(12, int(options.get('event_hours', 3))))
+    kilometers = max(1, min(100, int(options.get('event_kilometers', 8))))
+    minutes = max(15, min(180, int(options.get('meeting_minutes', 90))))
     library_key = digest(cfg.library)
     folder = api.ROOT / 'journey' / library_key
     folder.mkdir(parents=True, exist_ok=True)
@@ -223,10 +229,16 @@ def run(request, cfg, api):
     connection.execute('PRAGMA journal_mode=WAL')
     connection.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY,value TEXT NOT NULL)')
     cache = dict(connection.execute('SELECT key,value FROM cache'))
+    if request.get('retry_failed'):
+        failed_keys = [key for key, value in cache.items() if not key.startswith('hash:') and json.loads(value).get('state') == 'failed']
+        connection.executemany('DELETE FROM cache WHERE key=?', [(key,) for key in failed_keys])
+        for key in failed_keys:
+            cache.pop(key, None)
+        connection.commit()
     keys = {p.uuid: stamp(p) for p in photos}
     pending = [p for p in photos if keys[p.uuid] not in cache]
     pending.sort(key=lambda p: p.date.timestamp() if p.date else 0, reverse=True)
-    if request['command'] == 'journey-enrich':
+    if request['command'] == 'journey-enrich' and options.get('recognize_content', True):
         for p in pending[:max(1, min(24, int(request.get('limit', 12))))]:
             insight = {'labels': {}, 'text': '', 'state': 'complete'}
             path = api.preview_path(p)
@@ -246,7 +258,7 @@ def run(request, cfg, api):
             value = json.dumps(insight, ensure_ascii=False)
             connection.execute('INSERT OR REPLACE INTO cache VALUES (?,?)', (keys[p.uuid], value))
             connection.commit(); cache[keys[p.uuid]] = value
-    pet_names = set(cfg.section('classify').get('pet_faces', []))
+    pet_names = set(options.get('pet_names', cfg.section('classify').get('pet_faces', [])))
     entries = []; complete = unavailable = failed = 0
     for p in photos:
         insight = json.loads(cache.get(keys[p.uuid], '{}'))
@@ -256,7 +268,7 @@ def run(request, cfg, api):
             failed += insight.get('state') == 'failed'
         entries.append((p, meaning(p, insight, pet_names)))
     records = []; events = []
-    for bucket in event_buckets(connect_meeting_material(entries)):
+    for bucket in event_buckets(connect_meeting_material(entries, minutes), hours, kilometers):
         first, m = bucket[0]; last = bucket[-1][0]
         eid = digest('|'.join(sorted(p.uuid for p, _ in bucket)))[:20]
         date = api.lib.photo_date(first)
@@ -274,7 +286,7 @@ def run(request, cfg, api):
                            count=len(bucket), tracks=tracks, people=sorted({n for _, info in bucket for n in info['people']}),
                            place=m['place'], evidence=evidence, cover=related[0]))
     plan = api.persist_plan('journey', cfg.library, records, len(photos),
-                            ['按拍摄时间、人物、已有相册及本机内容识别自动联系；同日、同主题且间隔不超过 3 小时、位置不超过 8 公里的照片聚合为片段。共享内容可浏览，不参与删除。'],
+                            [f'按拍摄时间、人物、已有相册及本机内容识别自动联系；同日、同主题且间隔不超过 {hours} 小时、位置不超过 {kilometers} 公里的照片聚合为片段。共享内容可浏览，不参与删除。'],
                             token=str(uuid.uuid5(uuid.NAMESPACE_URL, cfg.library + '/journey')))
     duplicate_plan = duplicates(photos, api, cfg, connection)
     connection.commit(); connection.close()

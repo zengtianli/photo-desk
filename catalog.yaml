@@ -6,7 +6,7 @@ lifecycle: active
 form: mac
 domain: apps-mac
 function: 自动建立个人、猫、人物及会议工作时间线；关联照片与资料，增量本机内容识别，重复照片保留建议和预选清理。
-summary: 启动即全库归集并后台增量识别；本地时间线直接浏览，重复建议自动勾选，最终删除显式确认。
+summary: 启动即全库归集并后台增量识别；原生设置与可配置快捷键，空格预览和自适应照片网格，重复预选及确认删除。
 icon:
   glyph: photo.stack
   color: '#168B83'
@@ -14,6 +14,7 @@ key_scripts:
   - build.sh
   - Sources/PhotoDeskApp.swift
   - Sources/ContentView.swift
+  - Sources/ProductControls.swift
   - Sources/BackendClient.swift
   - backend/bridge.py
   - backend/journey.py

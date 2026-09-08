@@ -3,6 +3,37 @@ import AppKit
 
 @MainActor
 final class PhotoDeskModel: ObservableObject {
+    @Published var preferences: PhotoPreferences {
+        didSet {
+            preferences.save()
+            if oldValue.automatic != preferences.automatic || oldValue.includeShared != preferences.includeShared ||
+                oldValue.recognizeContent != preferences.recognizeContent || oldValue.refreshSeconds != preferences.refreshSeconds ||
+                oldValue.batchSize != preferences.batchSize || oldValue.eventHours != preferences.eventHours ||
+                oldValue.eventKilometers != preferences.eventKilometers || oldValue.meetingMinutes != preferences.meetingMinutes || oldValue.petNames != preferences.petNames {
+                preferenceTask?.cancel()
+                preferenceTask = Task { [weak self] in
+                    do { try await Task.sleep(for: .milliseconds(650)) } catch { return }
+                    guard let self else { return }
+                    if self.preferences.automatic { self.startAutomation(restart: true) } else { self.pauseAutomation() }
+                }
+            }
+        }
+    }
+    @Published var focusedPhotoID: String?
+    @Published var searchFocusToken = 0
+    @Published var navigationScrollToken = 0
+    @Published var gridFocused = false
+    var gridColumns = 3
+    func updateGridWidth(_ width: Double) { gridColumns = max(1, Int((width - 18) / (preferences.thumbnailWidth + 14))) }
+    private var selectionAnchor: String?
+    private var keyboardMonitor: Any?
+    private var preferenceTask: Task<Void, Never>?
+    var openSettingsAction: (() -> Void)?
+    lazy var shortcuts = PhotoShortcuts { [weak self] action in self?.performAction(action) }
+    init() {
+        preferences = PhotoPreferences.load()
+        track = preferences.initialTrack
+    }
     @Published var page: Page = .journey
     @Published var journey: JourneyResult?
     @Published var activeEvent: JourneyEvent?
@@ -35,7 +66,7 @@ final class PhotoDeskModel: ObservableObject {
     private var pendingDeleteSelection: [String] = []
     @Published var history: [HistoryEntry] = []
     @Published var ocrLimit = 100
-    @Published var library = UserDefaults.standard.string(forKey: "library") ?? ""
+    @Published var library = PhotoPreferences.defaults.string(forKey: "library") ?? ""
     let client = BackendClient()
     private var task: Task<Void, Never>?
     private var poller: Task<Void, Never>?
@@ -53,8 +84,8 @@ final class PhotoDeskModel: ObservableObject {
     func navigate(_ target: Page) {
         guard !busy else { return }
         page = target; group = "全部"; search = ""; pageNumber = 0; activeEvent = nil
-        selected = []
-        if target == .duplicates { selected = Set(plans[.duplicates]?.rows.filter { $0.recommended == true }.map(\.id) ?? []) }
+        selected = []; focusedPhotoID = nil; selectionAnchor = nil; gridFocused = false
+        if target == .duplicates && preferences.preselectDuplicates { selected = Set(plans[.duplicates]?.rows.filter { $0.recommended == true }.map(\.id) ?? []) }
         if target == .history { loadHistory() }
         if target == .overview && summary == nil { refresh() }
         if target == .library && plans[target] == nil { generate() }
@@ -120,6 +151,7 @@ final class PhotoDeskModel: ObservableObject {
     func checkBeforeDelete() {
         pauseAutomation()
         guard let plan, !selected.isEmpty else { return }
+        enlargedPhoto = nil
         let chosen = Array(selected)
         perform("正在核对待删除照片…") {
             let preview = try await self.client.execute(DeletionPreview.self, request: self.request("delete-preview", extra: ["plan_id": plan.id, "selected": chosen]))
@@ -182,7 +214,7 @@ final class PhotoDeskModel: ObservableObject {
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures")
         if panel.runModal() == .OK, let url = panel.url {
             guard url.pathExtension == "photoslibrary" else { error = "请选择 .photoslibrary 图库。"; return }
-            library = url.path; UserDefaults.standard.set(library, forKey: "library")
+            library = url.path; PhotoPreferences.defaults.set(library, forKey: "library")
             pauseAutomation(); journey = nil; activeEvent = nil
             summary = nil; plans = [:]; selected = []; page = .journey; refresh()
         }
@@ -218,7 +250,8 @@ final class PhotoDeskModel: ObservableObject {
         automation?.cancel(); automation = nil; organizing = false; automaticEnabled = false
         organizationStatus = "自动整理已暂停，已有结果仍可浏览"
     }
-    func startAutomation(restart: Bool = false) {
+    func startAutomation(restart: Bool = false, retryFailed: Bool = false) {
+        guard preferences.automatic else { pauseAutomation(); organizationStatus = "自动整理已关闭；可在设置中重新开启"; return }
         if automationStarted && !restart { return }
         automationStarted = true; automation?.cancel(); organizationError = nil
         automaticEnabled = true
@@ -226,23 +259,26 @@ final class PhotoDeskModel: ObservableObject {
         automation = Task {
             organizing = true
             var command = "journey-snapshot"
+            var shouldRetry = retryFailed
             while !Task.isCancelled {
                 do {
-                    let result = try await organizer.execute(JourneyResult.self, request: ["command": command, "library": chosenLibrary, "limit": 24])
+                    let result = try await organizer.execute(JourneyResult.self, request: ["command": command, "library": chosenLibrary, "limit": preferences.batchSize, "options": preferences.engineOptions, "retry_failed": shouldRetry])
+                    shouldRetry = false
                     guard !Task.isCancelled, chosenLibrary == library else { return }
                     journey = result
                     if status == "准备连接你的照片图库" { status = "已自动归集 \(result.total.formatted()) 项照片与视频" }
                     if activeEvent == nil { plans[.journey] = result.plan }
                     if page != .duplicates || plans[.duplicates] == nil || (command == "journey-snapshot" && selected.isEmpty) {
                         plans[.duplicates] = result.duplicates
-                        if page == .duplicates { selected = Set(result.duplicates.rows.filter { $0.recommended == true }.map(\.id)) }
+                        if page == .duplicates && preferences.preselectDuplicates { selected = Set(result.duplicates.rows.filter { $0.recommended == true }.map(\.id)) }
                     }
-                    organizationStatus = result.pending > 0
+                    let needsRecognition = result.pending > 0 && preferences.recognizeContent
+                    organizationStatus = !preferences.recognizeContent ? "已按时间、人物和已有相册归集；内容识别已关闭" : result.pending > 0
                         ? "已联系 \(result.total.formatted()) 张照片 · 内容识别 \(result.analyzed.formatted()) / \(result.total.formatted())；可以边看边整理"
                         : "全部照片已归集 · 新照片每分钟自动检查；内容识别缺失 \(result.unavailable) 项，失败 \(result.failed) 项"
-                    organizing = result.pending > 0
-                    command = result.pending > 0 ? "journey-enrich" : "journey-snapshot"
-                    try await Task.sleep(for: result.pending > 0 ? .milliseconds(300) : .seconds(60))
+                    organizing = needsRecognition
+                    command = needsRecognition ? "journey-enrich" : "journey-snapshot"
+                    try await Task.sleep(for: needsRecognition ? .milliseconds(300) : .seconds(preferences.refreshSeconds))
                 } catch {
                     guard !Task.isCancelled else { return }
                     organizing = false; automaticEnabled = false; organizationError = error.localizedDescription
@@ -251,5 +287,103 @@ final class PhotoDeskModel: ObservableObject {
                 }
             }
         }
+    }
+
+    var photoGridVisible: Bool { plan != nil && (page != .journey || activeEvent != nil) && ![Page.overview, .history].contains(page) }
+    var previewRow: PlanRow? {
+        filteredRows.first { $0.id == focusedPhotoID && (selected.contains($0.id) || $0.readOnly == true) } ?? filteredRows.first { selected.contains($0.id) }
+    }
+    var canPreview: Bool { !busy && photoGridVisible && previewRow != nil }
+    func selectPhoto(_ row: PlanRow, modifiers: NSEvent.ModifierFlags = []) {
+        guard !busy else { return }
+        gridFocused = true; focusedPhotoID = row.id
+        NSApp?.keyWindow?.makeFirstResponder(nil)
+        if modifiers.contains(.shift), let anchor = selectionAnchor,
+           let start = filteredRows.firstIndex(where: { $0.id == anchor }), let end = filteredRows.firstIndex(where: { $0.id == row.id }) {
+            selected = Set(filteredRows[min(start, end)...max(start, end)].filter { $0.readOnly != true }.map(\.id))
+        } else if modifiers.contains(.command) {
+            if selected.contains(row.id) { selected.remove(row.id) } else if row.readOnly != true { selected.insert(row.id) }
+            selectionAnchor = row.id
+        } else {
+            selected = row.readOnly == true ? [] : [row.id]; selectionAnchor = row.id
+        }
+    }
+    func selectAllPhotos() {
+        guard photoGridVisible, !busy else { return }
+        selected = Set(filteredRows.filter { $0.readOnly != true }.map(\.id)); gridFocused = true
+        if focusedPhotoID == nil { focusedPhotoID = filteredRows.first?.id }
+        NSApp?.keyWindow?.makeFirstResponder(nil)
+    }
+    func movePhoto(_ delta: Int, extend: Bool = false) {
+        guard photoGridVisible, !busy, !filteredRows.isEmpty else { return }
+        let rows = filteredRows
+        let index = focusedPhotoID.flatMap { id in rows.firstIndex { $0.id == id } }
+        let target = max(0, min(rows.count-1, (index ?? (delta > 0 ? -delta : 0)) + delta))
+        selectPhoto(rows[target], modifiers: extend ? [.shift] : [])
+        pageNumber = target / 60
+        navigationScrollToken += 1
+        if enlargedPhoto != nil { enlargedPhoto = rows[target] }
+    }
+    func togglePreview() {
+        if enlargedPhoto != nil { enlargedPhoto = nil; return }
+        guard canPreview else { return }
+        enlargedPhoto = previewRow
+    }
+    func performAction(_ action: PhotoAction) {
+        switch action {
+        case .toggleWindow:
+            NSApp?.activate(ignoringOtherApps: true)
+            if let window = NSApp?.windows.first(where: { $0.identifier?.rawValue == "main" }) {
+                window.deminiaturize(nil); window.makeKeyAndOrderFront(nil)
+            }
+        case .settings: openSettingsAction?()
+        case .pause: preferences.automatic.toggle()
+        case .search: searchFocusToken += 1; gridFocused = false
+        case .preview: togglePreview()
+        case .next: movePhoto(1)
+        case .previous: movePhoto(-1)
+        case .selectAll: selectAllPhotos()
+        case .delete: if !selected.isEmpty && photoGridVisible && gridFocused && !busy { checkBeforeDelete() }
+        case .refresh: if page == .journey { startAutomation(restart: true) } else if photoGridVisible { generate() } else { refresh() }
+        }
+    }
+    func handleNativeKey(_ code: UInt16, modifiers: NSEvent.ModifierFlags, editingText: Bool, mainWindow: Bool) -> Bool {
+        guard mainWindow, !editingText, !busy, !confirmDelete, !confirm, !confirmFixture, !shortcuts.recording else { return false }
+        let flags = modifiers.intersection([.command, .shift, .option, .control])
+        if flags == .command {
+            if code == 3 { performAction(.search); return true }
+            if code == 0, photoGridVisible { selectAllPhotos(); return true }
+            if code == 51, photoGridVisible, !selected.isEmpty { performAction(.delete); return true }
+        }
+        guard gridFocused || enlargedPhoto != nil else { return false }
+        if code == 49 && flags.isEmpty && (canPreview || enlargedPhoto != nil) { togglePreview(); return true }
+        if code == 53 && flags.isEmpty {
+            if enlargedPhoto != nil { enlargedPhoto = nil } else { selected = []; focusedPhotoID = nil }
+            return true
+        }
+        if flags.isEmpty || flags == .shift {
+            let delta: Int
+            switch code { case 123: delta = -1; case 124: delta = 1; case 125: delta = gridColumns; case 126: delta = -gridColumns; default: return false }
+            guard photoGridVisible else { return false }; movePhoto(delta, extend: flags == .shift); return true
+        }
+        return false
+    }
+    func startProductControls() {
+        guard keyboardMonitor == nil else { return }
+        _ = shortcuts
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let handled = MainActor.assumeIsolated {
+                guard let self, NSApp.isActive else { return false }
+                let window = NSApp.keyWindow
+                let isMain = window?.identifier?.rawValue == "main" || (self.enlargedPhoto != nil && window?.sheetParent?.identifier?.rawValue == "main")
+                return self.handleNativeKey(event.keyCode, modifiers: event.modifierFlags,
+                                            editingText: (window?.firstResponder as? NSTextView)?.isEditable == true, mainWindow: isMain)
+            }
+            return handled ? nil : event
+        }
+    }
+    func stopProductControls() {
+        if let keyboardMonitor { NSEvent.removeMonitor(keyboardMonitor); self.keyboardMonitor = nil }
+        shortcuts.suspend(); preferenceTask?.cancel()
     }
 }

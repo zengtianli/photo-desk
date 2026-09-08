@@ -70,7 +70,7 @@ def item(row, photo, number, cfg):
     return dict(id=str(number), cloud_guid=row.cloud_guid, filename=row.filename,
                 local_uuid=photo.uuid,
                 date=row.date, action=row.action, target=row.target, note=row.note,
-                preview_path=preview_path(photo), original_title=photo.title or '',
+                preview_path=preview_path(photo), original_path=getattr(photo, 'path', None) or '', is_movie=bool(getattr(photo, 'ismovie', False)), original_title=photo.title or '',
                 protected=lib.is_protected(photo, cfg) or '',
                 group=row.target if row.action != 'set-title' else '标题建议')
 
