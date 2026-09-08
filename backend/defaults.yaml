@@ -1,0 +1,27 @@
+library: null
+paths:
+  plans: plans
+  ocr: ocr
+  logs: logs
+  reports: reports
+scope:
+  personal_only: true
+protect:
+  favorites: true
+  named_persons: true
+  keywords: ["🔒敏感", "_keep"]
+classify:
+  pet_faces: ["大白"]
+  scene_labels: ["Cat", "Document", "Food", "Plant", "Sky"]
+ocr:
+  candidate_labels: ["Document", "Menu", "Receipt"]
+  candidate_uti: ["public.png"]
+  sensitive_album: "🔒敏感档案"
+  patterns:
+    身份证: '\b\d{17}[\dXx]\b'
+    护照: '\b[A-Z]\d{8}\b|\b[EeGg]\d{8}\b'
+    银行卡: '\b\d{16,19}\b'
+    手机号: '\b1[3-9]\d{9}\b'
+triage:
+  reimburse_months: 6
+  guide_keywords: ["攻略", "行程", "景点", "门票", "酒店", "路线", "自由行"]

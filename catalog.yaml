@@ -1,0 +1,24 @@
+name: photo-desk
+display_name: PhotoDesk
+bundle_id: cyou.tianli.PhotoDesk
+origin: own
+lifecycle: active
+form: mac
+domain: apps-mac
+function: iCloud 照片整理；原生缩略图审查、分类相册、截图票据、本地 OCR 敏感保护、空标题补充和相同指纹核对。
+summary: SwiftUI 界面与自包含 osxphotos 引擎；计划预览后按勾选项写入，Cloud GUID 对账，无自动删除。
+icon:
+  glyph: photo.stack
+  color: '#168B83'
+key_scripts:
+  - build.sh
+  - Sources/PhotoDeskApp.swift
+  - Sources/ContentView.swift
+  - Sources/BackendClient.swift
+  - backend/bridge.py
+  - scripts/build_engine.sh
+  - scripts/vendor_engine.py
+depends_on: []
+runtime: bundled-python
+owner: tianli
+docs: README.md

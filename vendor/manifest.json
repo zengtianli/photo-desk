@@ -1,0 +1,16 @@
+{
+  "source": "/Users/tianli/Apps/data/apple/photo/photocli/photocli",
+  "sha256": {
+    "backup.py": "915e09e0005d23d44914946668dc0248a56cf4dd919474513f16ed555c4730ed",
+    "audit.py": "c6addb72e51417ca6edcee5aa9c4def343e05260c95c410e0ebdb7c23f998a15",
+    "lib.py": "63f72099d074564a1bb7daa1c3d2c213ad3722ce534b068a18b62b8875858ebd",
+    "classify.py": "e694a5a81fdedd97f20baf3a7dda868ad81529960ff17b54eeeec8f737c64b48",
+    "__init__.py": "d126e7d230cc24f38e563e235fb45ea39aa61edb8cc57801357e586e3b5065fc",
+    "shared.py": "d3be2d542459ca15ce8120b73d8954fc11b20b38d3be978e9b3133190e7724a8",
+    "ocr.py": "3c7f85b771dead1b5016987f8bfc8f9c131d0939c172436f50995c474e5e800b",
+    "triage.py": "0b1ddff7abad01e535e2a4b3f93bbc83f68bbc362e0e6b4f8beec2b23b88465f",
+    "cli.py": "76c7f160fa9f30f2f742106f70cb7fe53fc570b7e9b22e40a91e61a3685ee041",
+    "dedup.py": "b91cdf549a359939e27e09109496bfd7fe3a84ceda8b158ff507881a9940a7de",
+    "title.py": "de214843706cf5b8d42beaa25d545cdc0bc44762071bff32394136d292192b21"
+  }
+}
