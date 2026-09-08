@@ -30,7 +30,7 @@ struct ProductChecks {
         let rows = (0..<70).map { i in
             PlanRow(id: "\(i)", cloudGuid: "guid\(i)", localUuid: "uuid\(i)", filename: "fixture-\(i).png", date: "2026-09-08",
                     action: "review", target: "测试", note: "", previewPath: "", originalPath: nil, isMovie: false, originalTitle: "",
-                    protected: "", group: "测试", recommended: i == 2, readOnly: i == 4)
+                    protected: "", group: i < 35 ? "测试" : "第二组", recommended: i == 2, readOnly: i == 4)
         }
         model.page = .library
         model.plans[.library] = PhotoPlan(id: "test", kind: "library", library: "/fake", created: "", examined: rows.count, warnings: [], csvPath: "", rows: rows)
@@ -49,6 +49,28 @@ struct ProductChecks {
         model.selectPhoto(rows[59]); model.movePhoto(1); precondition(model.pageNumber == 1 && model.selected == ["60"])
         model.selectAllPhotos(); precondition(model.selected.count == 69 && !model.selected.contains("4"))
         model.updateGridWidth(900); precondition(model.gridColumns == 3)
+
+        let timelinePlan = PhotoPlan(id: "timeline", kind: "journey", library: "/fake", created: "", examined: rows.count, warnings: [], csvPath: "", rows: rows)
+        let event = JourneyEvent(id: "event", title: "片段", group: "测试", date: "", endDate: "", count: 35, tracks: ["全部"], people: [], place: "", evidence: [], cover: rows[0])
+        let second = JourneyEvent(id: "second", title: "第二片段", group: "第二组", date: "", endDate: "", count: 35, tracks: ["全部"], people: [], place: "", evidence: [], cover: rows[35])
+        model.journey = JourneyResult(library: "/fake", generated: "", total: rows.count, analyzed: 0, pending: rows.count, unavailable: 0, failed: 0, albums: 1, events: [event, second], tracks: [], plan: timelinePlan, duplicates: timelinePlan)
+        model.navigate(.journey)
+        model.selectEvent(event)
+        precondition(model.activeEvent == nil && model.selectedEventIDs == ["event"] && model.selected.count == 34)
+        precondition(model.handleNativeKey(49, modifiers: [], editingText: false, mainWindow: true))
+        precondition(model.enlargedPhoto?.id == "0" && model.activeEvent == nil)
+        _ = model.handleNativeKey(49, modifiers: [], editingText: false, mainWindow: true)
+        precondition(model.enlargedPhoto == nil && model.selected.count == 34)
+        model.selectEvent(second, modifiers: .command)
+        precondition(model.selectedEventIDs.count == 2 && model.selected.count == 69)
+        model.selectEvent(event)
+        model.movePhoto(1, extend: true)
+        precondition(model.selectedEventIDs.count == 2 && model.selected.count == 69)
+        model.selectEvent(event)
+        model.selectEvent(event, modifiers: .command); precondition(model.selected.isEmpty && model.selectedEventIDs.isEmpty)
+        model.selectAllPhotos(); precondition(model.selected.count == 69)
+        model.openEvent(event); precondition(model.activeEvent?.id == "event" && model.selected.isEmpty)
+        model.selectPhoto(rows[0]); precondition(model.selected == ["0"] && model.enlargedPhoto == nil)
 
         let backend = FakeKeys(); var actions: [PhotoAction] = []
         let keys = PhotoShortcuts(defaults: defaults, backend: backend, monitorsEnabled: false) { actions.append($0) }

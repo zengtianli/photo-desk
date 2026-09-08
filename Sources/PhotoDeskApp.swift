@@ -43,7 +43,10 @@ struct PhotoDeskApp: App {
                     Button("上一张") { model.movePhoto(-1) }.disabled(!model.photoGridVisible)
                     Divider()
                     Button("全选筛选结果") { model.selectAllPhotos() }.disabled(!model.photoGridVisible || model.busy)
-                    Button("取消选择") { model.selected = []; model.focusedPhotoID = nil }.disabled(model.selected.isEmpty)
+                    Button("取消选择") {
+                        if model.timelineVisible { model.clearEventSelection() }
+                        else { model.selected = []; model.focusedPhotoID = nil }
+                    }.disabled(model.selected.isEmpty && model.selectedEventIDs.isEmpty)
                     Button("搜索照片") { model.performAction(.search) }.keyboardShortcut("f")
                     Divider()
                     Button("删除所选照片…") { model.performAction(.delete) }.keyboardShortcut(.delete, modifiers: .command).disabled(model.selected.isEmpty || model.busy || !model.gridFocused)

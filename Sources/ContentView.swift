@@ -224,7 +224,7 @@ struct ContentView: View {
             }.padding(.horizontal, 28).padding(.bottom, 15)
             if let event = model.activeEvent, let plan = model.plan {
                 HStack {
-                    Button("返回时间线", systemImage: "arrow.left") { model.activeEvent = nil; model.selected = []; model.group = "全部" }
+                    Button("返回时间线", systemImage: "arrow.left") { model.activeEvent = nil; model.clearEventSelection(); model.group = "全部" }
                     Text(event.title).font(.headline)
                     Text("\(event.count) 张 · \(event.date)").font(.caption).foregroundStyle(.secondary)
                 }.padding(.horizontal, 28).padding(.bottom, 8)
@@ -246,10 +246,14 @@ struct ContentView: View {
                 if model.journey == nil {
                     ContentUnavailableView("正在联系你的照片", systemImage: "sparkles", description: Text("先按时间、人物与已有相册归集，随后在后台补充内容识别。无需逐项启动。"))
                 } else {
+                    ScrollViewReader { reader in
                     ScrollView {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 16)], alignment: .leading, spacing: 16) {
                             ForEach(Array(model.events.prefix(model.eventLimit))) { event in
-                                JourneyCard(event: event) { model.openEvent(event) }
+                                JourneyCard(event: event, selected: model.selectedEventIDs.contains(event.id), select: {
+                                    searchFocused = false
+                                    model.selectEvent(event, modifiers: NSApp.currentEvent?.modifierFlags ?? [])
+                                }, open: { model.openEvent(event) }).id(event.id)
                             }
                         }.frame(maxWidth: .infinity, alignment: .topLeading)
                         if model.events.isEmpty {
@@ -259,11 +263,30 @@ struct ContentView: View {
                             Button("继续查看更早的片段") { model.eventLimit += 60 }.padding()
                         }
                     }.padding(.horizontal, 28)
+                        .background(GeometryReader { proxy in
+                            Color.clear.onAppear { model.gridColumns = max(1, Int((proxy.size.width - 40) / 276)) }
+                                .onChange(of: proxy.size.width) { _, width in model.gridColumns = max(1, Int((width - 40) / 276)) }
+                        })
+                        .onChange(of: model.navigationScrollToken) { _, _ in
+                            if let id = model.focusedEventID { reader.scrollTo(id, anchor: .center) }
+                        }
+                    }
+                    Divider()
+                    HStack {
+                        Button("全选片段") { model.selectAllPhotos() }
+                        Button("取消选择") { model.clearEventSelection() }.disabled(model.selectedEventIDs.isEmpty)
+                        Text("已选 \(model.selectedEventIDs.count) 个片段 · \(model.selectedPhotoCount) 张可操作照片").font(.caption)
+                        Spacer()
+                        Button("快速预览", systemImage: "eye") { model.togglePreview() }.disabled(!model.canPreview)
+                        Button("删除所选 \(model.selectedPhotoCount) 张照片…", role: .destructive) { model.checkBeforeDelete() }.disabled(model.selected.isEmpty)
+                    }.controlSize(.small).padding(15).disabled(model.busy)
+                    Text("单击选择整个片段，⌘增减、⇧连续选择；空格预览封面。逐张选择请点“查看片段”。共享照片只读。")
+                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 15).padding(.bottom, 10)
                 }
             }
         }
-        .onChange(of: model.track) { _, _ in model.eventLimit = 60 }
-        .onChange(of: model.eventSearch) { _, _ in model.eventLimit = 60 }
+        .onChange(of: model.track) { _, _ in model.eventLimit = 60; model.clearEventSelection() }
+        .onChange(of: model.eventSearch) { _, _ in model.eventLimit = 60; model.clearEventSelection() }
     }
 
     private func metric(_ label: String, value: Int, symbol: String) -> some View {
@@ -445,26 +468,37 @@ struct ContentView: View {
 
 private struct JourneyCard: View {
     let event: JourneyEvent
+    let selected: Bool
+    let select: () -> Void
     let open: () -> Void
     @State private var image: NSImage?
     var body: some View {
-        Button(action: open) {
+        VStack(spacing: 0) {
+        Button(action: select) {
             VStack(alignment: .leading, spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 9).fill(Color.secondary.opacity(0.08))
                     if let image { Image(nsImage: image).resizable().scaledToFill() }
                     else { Image(systemName: "photo.stack").font(.largeTitle).foregroundStyle(.secondary) }
                 }.frame(height: 155).clipped().clipShape(RoundedRectangle(cornerRadius: 9))
+                .overlay(alignment: .topTrailing) {
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.title2).foregroundStyle(selected ? accent : .gray)
+                        .background(.regularMaterial, in: Circle()).padding(7)
+                }
                 HStack { Text(event.date).font(.caption).foregroundStyle(.secondary); Spacer(); Text("\(event.count) 张").font(.caption.bold()).foregroundStyle(accent) }
                 Text(event.title).font(.headline).lineLimit(2)
                 Text(event.evidence.isEmpty ? "按同日拍摄顺序联系，内容识别继续补充" : event.evidence.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(3).frame(height: 43, alignment: .topLeading)
-                Label("查看这个片段", systemImage: "arrow.right").font(.caption).foregroundStyle(accent)
             }.padding(13).frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
-                .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.primary.opacity(0.07)))
+                .background(selected ? accent.opacity(0.06) : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
+                .overlay(RoundedRectangle(cornerRadius: 13).stroke(selected ? accent : Color.primary.opacity(0.07), lineWidth: selected ? 2 : 1))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .simultaneousGesture(TapGesture(count: 2).onEnded { open() })
+        Button("查看片段", systemImage: "arrow.right", action: open).buttonStyle(.link).font(.caption).padding(9)
+        }
         .task(id: event.cover.previewPath) {
             let path = event.cover.previewPath
             let cg = await Task.detached(priority: .utility) { () -> CGImage? in

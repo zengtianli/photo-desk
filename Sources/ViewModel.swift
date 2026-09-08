@@ -37,6 +37,35 @@ final class PhotoDeskModel: ObservableObject {
     @Published var page: Page = .journey
     @Published var journey: JourneyResult?
     @Published var activeEvent: JourneyEvent?
+    @Published var selectedEventIDs: Set<String> = []
+    @Published var focusedEventID: String?
+    private var eventAnchor: String?
+    private var selectionJourney: JourneyResult?
+    var timelineVisible: Bool { page == .journey && activeEvent == nil }
+    func clearEventSelection() {
+        selectedEventIDs = []; focusedEventID = nil; eventAnchor = nil
+        selectionJourney = nil; selected = []; focusedPhotoID = nil; gridFocused = false
+        if page == .journey, let journey { plans[.journey] = journey.plan }
+    }
+    func selectEvent(_ event: JourneyEvent, modifiers: NSEvent.ModifierFlags = []) {
+        guard !busy, timelineVisible else { return }
+        if selectionJourney == nil { selectionJourney = journey }
+        plans[.journey] = selectionJourney?.plan
+        gridFocused = true; focusedEventID = event.id; focusedPhotoID = event.cover.id
+        NSApp?.keyWindow?.makeFirstResponder(nil)
+        if modifiers.contains(.shift), let anchor = eventAnchor,
+           let start = events.firstIndex(where: { $0.id == anchor }), let end = events.firstIndex(where: { $0.id == event.id }) {
+            selectedEventIDs = Set(events[min(start, end)...max(start, end)].map(\.id))
+        } else if modifiers.contains(.command) {
+            if selectedEventIDs.contains(event.id) { selectedEventIDs.remove(event.id) } else { selectedEventIDs.insert(event.id) }
+            eventAnchor = event.id
+        } else { selectedEventIDs = [event.id]; eventAnchor = event.id }
+        syncEventSelection()
+    }
+    private func syncEventSelection() {
+        let groups = Set(events.filter { selectedEventIDs.contains($0.id) }.map(\.group))
+        selected = Set((plan?.rows ?? []).filter { groups.contains($0.group) && $0.readOnly != true }.map(\.id))
+    }
     @Published var track = "全部"
     @Published var eventSearch = ""
     @Published var eventLimit = 60
@@ -83,6 +112,7 @@ final class PhotoDeskModel: ObservableObject {
 
     func navigate(_ target: Page) {
         guard !busy else { return }
+        clearEventSelection()
         page = target; group = "全部"; search = ""; pageNumber = 0; activeEvent = nil
         selected = []; focusedPhotoID = nil; selectionAnchor = nil; gridFocused = false
         if target == .duplicates && preferences.preselectDuplicates { selected = Set(plans[.duplicates]?.rows.filter { $0.recommended == true }.map(\.id) ?? []) }
@@ -169,7 +199,7 @@ final class PhotoDeskModel: ObservableObject {
             let current = try await self.client.execute(DeletionPreview.self, request: self.request("delete-preview", extra: ["plan_id": preview.planId, "selected": self.pendingDeleteSelection]))
             guard Set(current.items.map(\.uuid)) == Set(preview.items.map(\.uuid)) else { throw NativePhotos.fail("所选照片发生变化，请重新查看后确认。") }
             let outcome = try await NativePhotos.delete(current.items, recordRoot: Self.dataRoot)
-            self.plans = [:]; self.selected = []; self.pendingDeletion = nil
+            self.clearEventSelection(); self.plans = [:]; self.selected = []; self.pendingDeletion = nil
             self.activeEvent = nil
             // A successful deletion must not be relabeled as failed if a subsequent read fails.
             self.summary = try? await self.client.execute(LibrarySummary.self, request: self.request("audit"))
@@ -236,13 +266,14 @@ final class PhotoDeskModel: ObservableObject {
     func openPhotosPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!) }
 
     var events: [JourneyEvent] {
-        (journey?.events ?? []).filter { event in
+        ((selectionJourney ?? journey)?.events ?? []).filter { event in
             (track == "全部" || event.tracks.contains(track)) &&
             (eventSearch.isEmpty || ([event.title, event.date, event.place] + event.people + event.evidence).contains { $0.localizedCaseInsensitiveContains(eventSearch) })
         }
     }
     func openEvent(_ event: JourneyEvent) {
-        guard let journey else { return }
+        guard let journey = selectionJourney ?? journey else { return }
+        clearEventSelection()
         activeEvent = event; plans[.journey] = journey.plan; page = .journey
         group = event.group; search = ""; selected = []; pageNumber = 0
     }
@@ -267,7 +298,7 @@ final class PhotoDeskModel: ObservableObject {
                     guard !Task.isCancelled, chosenLibrary == library else { return }
                     journey = result
                     if status == "准备连接你的照片图库" { status = "已自动归集 \(result.total.formatted()) 项照片与视频" }
-                    if activeEvent == nil { plans[.journey] = result.plan }
+                    if activeEvent == nil && selectionJourney == nil { plans[.journey] = result.plan }
                     if page != .duplicates || plans[.duplicates] == nil || (command == "journey-snapshot" && selected.isEmpty) {
                         plans[.duplicates] = result.duplicates
                         if page == .duplicates && preferences.preselectDuplicates { selected = Set(result.duplicates.rows.filter { $0.recommended == true }.map(\.id)) }
@@ -289,9 +320,10 @@ final class PhotoDeskModel: ObservableObject {
         }
     }
 
-    var photoGridVisible: Bool { plan != nil && (page != .journey || activeEvent != nil) && ![Page.overview, .history].contains(page) }
+    var photoGridVisible: Bool { plan != nil && ![Page.overview, .history].contains(page) }
     var previewRow: PlanRow? {
-        filteredRows.first { $0.id == focusedPhotoID && (selected.contains($0.id) || $0.readOnly == true) } ?? filteredRows.first { selected.contains($0.id) }
+        if timelineVisible { return events.first { $0.id == focusedEventID && selectedEventIDs.contains($0.id) }?.cover }
+        return filteredRows.first { $0.id == focusedPhotoID && (selected.contains($0.id) || $0.readOnly == true) } ?? filteredRows.first { selected.contains($0.id) }
     }
     var canPreview: Bool { !busy && photoGridVisible && previewRow != nil }
     func selectPhoto(_ row: PlanRow, modifiers: NSEvent.ModifierFlags = []) {
@@ -310,11 +342,26 @@ final class PhotoDeskModel: ObservableObject {
     }
     func selectAllPhotos() {
         guard photoGridVisible, !busy else { return }
+        if timelineVisible {
+            if selectionJourney == nil { selectionJourney = journey }
+            plans[.journey] = selectionJourney?.plan
+            selectedEventIDs = Set(events.map(\.id)); focusedEventID = events.first?.id
+            gridFocused = true; syncEventSelection(); NSApp?.keyWindow?.makeFirstResponder(nil); return
+        }
         selected = Set(filteredRows.filter { $0.readOnly != true }.map(\.id)); gridFocused = true
         if focusedPhotoID == nil { focusedPhotoID = filteredRows.first?.id }
         NSApp?.keyWindow?.makeFirstResponder(nil)
     }
     func movePhoto(_ delta: Int, extend: Bool = false) {
+        if timelineVisible {
+            guard !busy, !events.isEmpty else { return }
+            let index = events.firstIndex { $0.id == focusedEventID }
+            let target = max(0, min(events.count - 1, (index ?? (delta > 0 ? -delta : 0)) + delta))
+            selectEvent(events[target], modifiers: extend ? [.shift] : [])
+            eventLimit = max(eventLimit, target + 1); navigationScrollToken += 1
+            if enlargedPhoto != nil { enlargedPhoto = events[target].cover }
+            return
+        }
         guard photoGridVisible, !busy, !filteredRows.isEmpty else { return }
         let rows = filteredRows
         let index = focusedPhotoID.flatMap { id in rows.firstIndex { $0.id == id } }
@@ -358,7 +405,7 @@ final class PhotoDeskModel: ObservableObject {
         guard gridFocused || enlargedPhoto != nil else { return false }
         if code == 49 && flags.isEmpty && (canPreview || enlargedPhoto != nil) { togglePreview(); return true }
         if code == 53 && flags.isEmpty {
-            if enlargedPhoto != nil { enlargedPhoto = nil } else { selected = []; focusedPhotoID = nil }
+            if enlargedPhoto != nil { enlargedPhoto = nil } else if timelineVisible { clearEventSelection() } else { selected = []; focusedPhotoID = nil }
             return true
         }
         if flags.isEmpty || flags == .shift {
