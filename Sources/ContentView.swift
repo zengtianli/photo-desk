@@ -224,7 +224,7 @@ struct ContentView: View {
                 Text("\(model.filteredRows.count) 项").font(.caption).foregroundStyle(.secondary)
                 Button("导出清单") { model.exportCSV() }.disabled(model.busy)
             }.padding(.horizontal, 28).padding(.vertical, 12)
-            HSplitView {
+            HStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 3) {
                         groupButton("全部", count: plan.rows.count)
@@ -232,20 +232,21 @@ struct ContentView: View {
                             groupButton(group, count: counts[group] ?? 0)
                         }
                     }.padding(10)
-                }.frame(minWidth: 150, idealWidth: 185, maxWidth: 230)
+                }.frame(width: 185)
+                Divider()
                 ScrollView {
                     if model.filteredRows.isEmpty {
                         ContentUnavailableView("没有匹配照片", systemImage: "magnifyingglass", description: Text("清空搜索或选择其他月份后再查看。"))
                     }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 14)], spacing: 14) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 14)], spacing: 14) {
                         ForEach(model.visibleRows) { row in
                             PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: false, enlarge: { model.enlargedPhoto = row }) {
                                 if model.selected.contains(row.id) { model.selected.remove(row.id) } else { model.selected.insert(row.id) }
                             }.disabled(model.busy)
                         }
-                    }.padding(16)
-                }.frame(minWidth: 390)
-            }
+                    }.frame(maxWidth: .infinity, alignment: .topLeading).padding(16)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
             HStack(spacing: 12) {
                 Button("勾选筛选结果") { model.selected.formUnion(model.filteredRows.map(\.id)) }.disabled(model.busy)
