@@ -26,7 +26,7 @@ run('ping', {'command': 'ping'})
 run('ocr-probe', {'command': 'ocr-probe'})
 with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
     jobs = [pool.submit(run, 'audit', {'command': 'audit'})]
-    jobs += [pool.submit(run, kind, {'command': 'plan', 'kind': kind}) for kind in ('classify', 'title', 'duplicates')]
+    jobs += [pool.submit(run, kind, {'command': 'plan', 'kind': kind}) for kind in ('classify', 'title', 'duplicates', 'library')]
     for job in jobs:
         job.result()
 for kind in ('triage', 'sensitive'):

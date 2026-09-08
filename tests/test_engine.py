@@ -47,6 +47,38 @@ class SafetyTests(unittest.TestCase):
         selected, _ = bridge.validate_selection(plan, ['1'], [photo()], cfg)
         self.assertEqual([r['id'] for r in selected], ['1'])
 
+    def test_deletion_deduplicates_same_photo_across_actions(self):
+        plan = {'rows': [row(), row(id='1', target='another')]}
+        result = bridge.resolve_deletion_rows(plan, ['0', '1'], [photo()], cfg)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['uuid'], 'uuid')
+
+    def test_delete_local_unsynced_photo(self):
+        plan = {'rows': [row(cloud_guid='', local_uuid='uuid')]}
+        result = bridge.resolve_deletion_rows(plan, ['0'], [photo(cloud_guid=None)], cfg)
+        self.assertEqual(result[0]['uuid'], 'uuid')
+
+    def test_deletion_rejects_shared_or_missing(self):
+        for photos in ([], [photo(shared=True)], [photo(shared_library=True)]):
+            with self.assertRaises(ValueError): bridge.resolve_deletion_rows({'rows': [row()]}, ['0'], photos, cfg)
+
+    def test_deletion_keeps_favorite_warning_for_explicit_review(self):
+        result = bridge.resolve_deletion_rows({'rows': [row()]}, ['0'], [photo(favorite=True)], cfg)
+        self.assertEqual(result[0]['protected'], '收藏')
+
+    def test_deletion_does_not_fallback_when_cloud_identity_disappears(self):
+        with self.assertRaises(ValueError):
+            bridge.resolve_deletion_rows({'rows': [row(local_uuid='uuid')]}, ['0'], [photo(cloud_guid='different')], cfg)
+
+    def test_missing_legacy_system_preference_still_resolves_exact_asset(self):
+        import osxphotos.utils
+        plan = {'id': 'fixture', 'library': '/fake.photoslibrary', 'rows': [row()]}
+        with patch.object(bridge, 'load_plan', return_value=plan), \
+             patch.object(osxphotos.utils, 'get_system_library_path', return_value=None), \
+             patch.object(bridge.lib, 'load_db', return_value=Photo(photos=lambda: [photo()])):
+            result = bridge.deletion_preview({'plan_id': 'fixture', 'selected': ['0']}, cfg)
+        self.assertEqual(result['items'][0]['uuid'], 'uuid')
+
     def test_stale_missing_and_shared_abort(self):
         for photos in ([], [photo(shared=True)], [photo(shared_library=True)]):
             with self.assertRaises(ValueError): bridge.validate_selection({'rows': [row()]}, ['0'], photos, cfg)

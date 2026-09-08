@@ -16,6 +16,11 @@ final class PhotoDeskModel: ObservableObject {
     @Published var error: String?
     @Published var progress: WorkProgress?
     @Published var confirm = false
+    @Published var confirmDelete = false
+    @Published var confirmFixture = false
+    @Published var pendingDeletion: DeletionPreview?
+    @Published var enlargedPhoto: PlanRow?
+    private var pendingDeleteSelection: [String] = []
     @Published var history: [HistoryEntry] = []
     @Published var ocrLimit = 100
     @Published var library = UserDefaults.standard.string(forKey: "library") ?? ""
@@ -31,12 +36,14 @@ final class PhotoDeskModel: ObservableObject {
     }
     var visibleRows: [PlanRow] { Array(filteredRows.dropFirst(pageNumber * 60).prefix(60)) }
     var selectedRows: [PlanRow] { (plan?.rows ?? []).filter { selected.contains($0.id) } }
+    var selectedPhotoCount: Int { Set(selectedRows.map { $0.cloudGuid.isEmpty ? ($0.localUuid ?? $0.id) : $0.cloudGuid }).count }
 
     func navigate(_ target: Page) {
         guard !busy else { return }
         page = target; group = "全部"; search = ""; pageNumber = 0
         selected = []
         if target == .history { loadHistory() }
+        if target == .library && plans[target] == nil { generate() }
     }
     private func request(_ command: String, extra: [String: Any] = [:]) -> [String: Any] {
         var result: [String: Any] = ["command": command, "library": library, "request_id": requestID]
@@ -49,13 +56,18 @@ final class PhotoDeskModel: ObservableObject {
         poller = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { break }
                 if let data = try? Data(contentsOf: url), let p = try? JSONDecoder().decode(WorkProgress.self, from: data) { progress = p }
             }
         }
         task = Task {
             defer { busy = false; applying = false; poller?.cancel(); progress = nil }
             do { try await work() }
-            catch { if !Task.isCancelled { self.error = error.localizedDescription; status = "任务未完成" } else { status = "已取消；图库未改动" } }
+            catch {
+                if (error as NSError).code == NSUserCancelledError { status = "已取消；照片未删除" }
+                else if !Task.isCancelled { self.error = error.localizedDescription; status = "任务未完成" }
+                else { status = "已取消；图库未改动" }
+            }
         }
     }
     func cancel() { guard !applying else { return }; task?.cancel() }
@@ -70,7 +82,7 @@ final class PhotoDeskModel: ObservableObject {
         perform(target.usesOCR ? "正在本地识别…" : "正在生成整理建议…") {
             let result = try await self.client.execute(PhotoPlan.self, request: self.request("plan", extra: ["kind": target.rawValue, "limit": self.ocrLimit]))
             self.plans[target] = result; self.selected = []; self.group = "全部"; self.pageNumber = 0
-            self.status = "已生成 \(result.rows.count.formatted()) 项建议，尚未写入图库"
+            self.status = target == .library ? "已载入 \(result.rows.count.formatted()) 张照片与视频" : "已生成 \(result.rows.count.formatted()) 项建议，尚未写入图库"
         }
     }
     func checkBeforeApply() {
@@ -85,6 +97,44 @@ final class PhotoDeskModel: ObservableObject {
         perform("正在写入照片图库…") {
             let result = try await self.client.execute(ApplyResult.self, request: self.request("apply", extra: ["plan_id": plan.id, "selected": Array(self.selected), "confirmed": true]))
             self.status = result.message; self.plans.removeValue(forKey: self.page); self.selected = []
+        }
+    }
+    func checkBeforeDelete() {
+        guard let plan, !selected.isEmpty else { return }
+        let chosen = Array(selected)
+        perform("正在核对待删除照片…") {
+            let preview = try await self.client.execute(DeletionPreview.self, request: self.request("delete-preview", extra: ["plan_id": plan.id, "selected": chosen]))
+            try await NativePhotos.authorize()
+            _ = try NativePhotos.resolve(preview.items)
+            self.pendingDeletion = preview; self.pendingDeleteSelection = chosen
+            self.status = "已核对 \(preview.items.count) 张照片，请确认删除范围"; self.confirmDelete = true
+        }
+    }
+    func deleteSelected() {
+        guard let preview = pendingDeletion else { return }
+        confirmDelete = false; applying = true
+        perform("等待系统确认删除…") {
+            // Re-resolve Cloud GUIDs and library ownership after the review sheet.
+            let current = try await self.client.execute(DeletionPreview.self, request: self.request("delete-preview", extra: ["plan_id": preview.planId, "selected": self.pendingDeleteSelection]))
+            guard Set(current.items.map(\.uuid)) == Set(preview.items.map(\.uuid)) else { throw NativePhotos.fail("所选照片发生变化，请重新查看后确认。") }
+            let outcome = try await NativePhotos.delete(current.items, recordRoot: Self.dataRoot)
+            self.plans = [:]; self.selected = []; self.pendingDeletion = nil
+            // A successful deletion must not be relabeled as failed if a subsequent read fails.
+            self.summary = try? await self.client.execute(LibrarySummary.self, request: self.request("audit"))
+            if self.page == .library {
+                self.plans[.library] = try? await self.client.execute(PhotoPlan.self, request: self.request("plan", extra: ["kind": "library"]))
+            }
+            self.pageNumber = 0
+            self.status = outcome.verified ? "已删除并核对 \(outcome.count) 张照片，可在“照片 → 最近删除”中恢复" : "系统已完成删除，图库刷新核对尚未完成，请稍后刷新"
+        }
+    }
+    func createFixture() {
+        confirmFixture = false; applying = true
+        perform("正在创建一张明确标记的测试照片…") {
+            let filename = try await NativePhotos.createFixture(recordRoot: Self.dataRoot)
+            self.page = .library; self.group = "全部"; self.search = filename; self.selected = []; self.pageNumber = 0
+            self.plans[.library] = try await self.client.execute(PhotoPlan.self, request: self.request("plan", extra: ["kind": "library"]))
+            self.status = "测试照片已导入并核对。可用这张新图验证整理和删除。"
         }
     }
     func loadHistory() {
@@ -129,4 +179,5 @@ final class PhotoDeskModel: ObservableObject {
     }
     func openPhotos() { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Photos.app")) }
     func openPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!) }
+    func openPhotosPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!) }
 }

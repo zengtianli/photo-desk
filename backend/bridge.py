@@ -68,6 +68,7 @@ def preview_path(photo):
 
 def item(row, photo, number, cfg):
     return dict(id=str(number), cloud_guid=row.cloud_guid, filename=row.filename,
+                local_uuid=photo.uuid,
                 date=row.date, action=row.action, target=row.target, note=row.note,
                 preview_path=preview_path(photo), original_title=photo.title or '',
                 protected=lib.is_protected(photo, cfg) or '',
@@ -113,6 +114,16 @@ def build_plan(request, cfg):
     kind = request['kind']
     progress(request, '正在读取图库，生成整理建议…')
     db = lib.load_db(cfg.library)
+    if kind == 'library':
+        members = [p for p in db.photos() if editable(p)]
+        members.sort(key=lambda p: p.date.timestamp() if p.date else 0, reverse=True)
+        records = []
+        for i, p in enumerate(members):
+            month = p.date.strftime('%Y-%m') if p.date else '日期未知'
+            row = lib.PlanRow(p.cloud_guid or '', p.original_filename or '', lib.photo_date(p),
+                              'review', month, '视频' if p.ismovie else '照片')
+            records.append(item(row, p, i, cfg))
+        return persist_plan(kind, db.library_path, records, len(members), ['按拍摄月份浏览个人图库；可放大预览、勾选并删除。共享内容不参与删除。'])
     photos = [p for p in db.photos() if editable(p) and p.cloud_guid]
     index = {p.cloud_guid: p for p in photos}
     rows = []
@@ -176,7 +187,7 @@ def build_plan(request, cfg):
             for p in members:
                 note = '相同原片指纹；编辑效果及 Live Photo 动态部分需人工核对'
                 rows.append(lib.PlanRow(p.cloud_guid, p.original_filename or '', lib.photo_date(p), 'review', group, note))
-        warnings = ['这是相同原片指纹的只读清单，不是相似照片检测，也不代表可直接删除。']
+        warnings = ['按相同原片指纹分组，不是相似照片检测。请放大核对后手动勾选删除，编辑效果及 Live Photo 动态部分可能不同。']
     else:
         raise ValueError('未知整理类型。')
 
@@ -194,16 +205,57 @@ def build_plan(request, cfg):
             if row.target in full_paths:
                 continue
         filtered.append(row)
+    plan = persist_plan(kind, db.library_path, [item(r, index[r.cloud_guid], i, cfg) for i, r in enumerate(filtered)], examined, warnings)
+    progress(request, f'建议已生成：{len(filtered)} 项')
+    return plan
+
+
+def persist_plan(kind, library, records, examined, warnings):
     token = str(uuid.uuid4())
     path = ROOT / 'plans' / f'{token}.json'
     csv_path = path.with_suffix('.csv')
-    lib.write_plan(filtered, csv_path)
-    plan = dict(id=token, kind=kind, library=str(Path(db.library_path).resolve()), created=now(),
-                examined=examined, warnings=warnings, csv_path=str(csv_path),
-                rows=[item(r, index[r.cloud_guid], i, cfg) for i, r in enumerate(filtered)])
+    fields = ('cloud_guid', 'filename', 'date', 'action', 'target', 'note')
+    lib.write_plan([lib.PlanRow(**{k: r[k] for k in fields}) for r in records], csv_path)
+    plan = dict(id=token, kind=kind, library=str(Path(library).resolve()), created=now(),
+                examined=examined, warnings=warnings, csv_path=str(csv_path), rows=records)
     atomic_json(path, plan)
-    progress(request, f'建议已生成：{len(filtered)} 项')
     return plan
+
+
+def resolve_deletion_rows(plan, selected, photos, cfg):
+    selected = set(selected)
+    if not selected or not selected <= {r['id'] for r in plan['rows']}:
+        raise ValueError('请选择当前列表中的照片。')
+    cloud_index = {p.cloud_guid: p for p in photos if p.cloud_guid}
+    local_index = {p.uuid: p for p in photos}
+    result = {}
+    for row in plan['rows']:
+        if row['id'] not in selected:
+            continue
+        # Cloud GUID survives repairs; unsynced local-only assets remain bound to this library.
+        p = cloud_index.get(row['cloud_guid']) if row['cloud_guid'] else local_index.get(row.get('local_uuid'))
+        if p is None or not editable(p):
+            raise ValueError('部分照片已移除或变成共享内容，请刷新列表后重试。')
+        result[p.uuid] = dict(uuid=p.uuid, cloud_guid=p.cloud_guid or '',
+                              filename=p.original_filename or '', protected=lib.is_protected(p, cfg) or '')
+    return list(result.values())
+
+
+def deletion_preview(request, cfg):
+    from osxphotos.utils import get_system_library_path
+    plan = load_plan(request['plan_id'])
+    system = get_system_library_path()
+    # New macOS versions may omit the legacy SystemLibraryPath preference.
+    # Native PhotoKit must still resolve EVERY exact asset UUID before showing
+    # confirmation and again before deletion; missing preferences are not proof
+    # that this is a different library.
+    if system and str(Path(system).resolve()) != plan['library']:
+        raise ValueError('App 内删除仅支持系统照片图库。其他图库请在“照片”中手动处理。')
+    if cfg.library and str(Path(cfg.library).resolve()) != plan['library']:
+        raise ValueError('当前图库与所选计划不一致，请刷新后重试。')
+    photos = lib.load_db(plan['library']).photos()
+    items = resolve_deletion_rows(plan, request['selected'], photos, cfg)
+    return dict(plan_id=plan['id'], library=plan['library'], items=items)
 
 
 def load_plan(token):
@@ -339,6 +391,8 @@ def main():
                     data = build_plan(request, cfg)
                 elif command == 'apply':
                     data = apply_plan(request, cfg)
+                elif command == 'delete-preview':
+                    data = deletion_preview(request, cfg)
                 else:
                     raise ValueError('未知操作。')
         print(json.dumps({'ok': True, 'data': data}, ensure_ascii=False))

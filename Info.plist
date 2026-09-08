@@ -29,6 +29,6 @@
 	<key>NSAppleEventsUsageDescription</key>
 	<string>按照你确认的计划，在照片中创建相册、添加标签和补充标题。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>读取照片和相册，预览整理建议。</string>
+	<string>浏览和整理你的照片，并在你选中且确认后将照片移到最近删除。</string>
 </dict>
 </plist>

@@ -20,6 +20,7 @@ struct LibrarySummary: Decodable {
 struct PlanRow: Decodable, Identifiable {
     let id: String
     let cloudGuid: String
+    let localUuid: String?
     let filename: String
     let date: String
     let action: String
@@ -42,8 +43,8 @@ struct PhotoPlan: Decodable, Identifiable {
     let warnings: [String]
     let csvPath: String
     let rows: [PlanRow]
-    var isReadOnly: Bool { kind == "duplicates" }
-    var groups: [String] { Array(Set(rows.map(\.group))).sorted() }
+    var isReadOnly: Bool { kind == "duplicates" || kind == "library" }
+    var groups: [String] { Array(Set(rows.map(\.group))).sorted(by: kind == "library" ? (>) : (<)) }
 }
 struct ApplyResult: Decodable { let message: String; let changed: Int; let receiptPath: String? }
 struct HistoryEntry: Decodable, Identifiable {
@@ -53,11 +54,12 @@ struct HistoryResult: Decodable { let entries: [HistoryEntry] }
 struct WorkProgress: Decodable { let message: String; let done: Int; let total: Int }
 
 enum Page: String, CaseIterable, Identifiable {
-    case overview, classify, triage, sensitive, title, duplicates, history
+    case overview, library, classify, triage, sensitive, title, duplicates, history
     var id: String { rawValue }
     var name: String {
         switch self {
         case .overview: return "图库概览"
+        case .library: return "全部照片"
         case .classify: return "分类整理"
         case .triage: return "截图与票据"
         case .sensitive: return "敏感照片"
@@ -69,6 +71,7 @@ enum Page: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .overview: return "square.grid.2x2"
+        case .library: return "photo.on.rectangle"
         case .classify: return "folder.badge.plus"
         case .triage: return "doc.viewfinder"
         case .sensitive: return "lock.shield"
@@ -80,6 +83,7 @@ enum Page: String, CaseIterable, Identifiable {
     var detail: String {
         switch self {
         case .overview: return "看看照片都在哪里，再开始整理。"
+        case .library: return "浏览、放大查看和删除所选照片；按月份分组，最新照片在前。"
         case .classify: return "按年月、人物和场景归入相册，已有分类自动跳过。"
         case .triage: return "本地识别截图和文档，票据保留，拿不准的留给你核对。"
         case .sensitive: return "查找含证件、银行卡或手机号的照片，标记为敏感档案。"
@@ -90,6 +94,20 @@ enum Page: String, CaseIterable, Identifiable {
     }
     var usesOCR: Bool { self == .triage || self == .sensitive }
 }
+
+struct DeletionItem: Codable, Identifiable {
+    let uuid: String
+    let cloudGuid: String
+    let filename: String
+    let protected: String
+    var id: String { uuid }
+}
+struct DeletionPreview: Decodable {
+    let planId: String
+    let library: String
+    let items: [DeletionItem]
+}
+struct DeletionOutcome { let count: Int; let verified: Bool }
 
 enum Contract {
     static func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {

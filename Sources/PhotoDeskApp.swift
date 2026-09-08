@@ -32,6 +32,8 @@ struct PhotoDeskApp: App {
                     Button("选择图库…") { model.chooseLibrary() }.disabled(model.busy)
                     Button("打开照片") { model.openPhotos() }
                     Button("打开本地记录") { model.openRecords() }
+                    Divider()
+                    Button("导入验收测试图…") { model.confirmFixture = true }.disabled(model.busy)
                 }
             }
     }

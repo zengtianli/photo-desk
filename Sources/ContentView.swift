@@ -60,6 +60,14 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $model.confirm) { confirmation }
+        .sheet(isPresented: $model.confirmDelete) { deletionConfirmation }
+        .sheet(item: $model.enlargedPhoto) { row in LargePhotoPreview(row: row) }
+        .alert("导入一张验收测试图？", isPresented: $model.confirmFixture) {
+            Button("取消", role: .cancel) { }
+            Button("创建测试图") { model.createFixture() }
+        } message: {
+            Text("将在系统照片图库中新建一张带 PhotoDesk-QA 标记的图片，用于检查整理和删除功能。不会改动已有照片。")
+        }
         .onChange(of: model.group) { _, _ in model.pageNumber = 0 }
         .onChange(of: model.search) { _, _ in model.pageNumber = 0 }
     }
@@ -72,7 +80,7 @@ struct ContentView: View {
             }
             Spacer(minLength: 15)
             if ![Page.overview, .history].contains(model.page) {
-                Button(model.plan == nil ? "生成建议" : "重新分析", systemImage: "sparkles") { model.generate() }
+                Button(model.page == .library ? "刷新照片" : (model.plan == nil ? "生成建议" : "重新分析"), systemImage: model.page == .library ? "arrow.clockwise" : "sparkles") { model.generate() }
                     .buttonStyle(.borderedProminent).controlSize(.large).disabled(model.busy)
             }
         }.padding(28)
@@ -82,6 +90,7 @@ struct ContentView: View {
             Label(text, systemImage: "exclamationmark.circle").textSelection(.enabled)
             HStack {
                 Button("打开权限设置") { model.openPrivacy() }
+                Button("照片访问权限") { model.openPhotosPrivacy() }
                 Button("在 Finder 显示 App") { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }
                 Button("收起") { model.error = nil }
             }.buttonStyle(.link).font(.caption)
@@ -201,14 +210,15 @@ struct ContentView: View {
                 ContentUnavailableView {
                     Label("先看看整理建议", systemImage: model.page.symbol)
                 } description: {
-                    Text(model.page == .duplicates ? "分析相同原片指纹，生成只读核对清单。" : "点击“生成建议”开始分析。查看照片后，勾选想要执行的项目。")
+                    Text(model.page == .duplicates ? "分析相同原片指纹，放大核对后可手动勾选删除。" : "点击“生成建议”开始分析。查看照片后，勾选想要执行的项目。")
                 }
             }
         }
     }
 
     private func planBrowser(_ plan: PhotoPlan) -> some View {
-        VStack(spacing: 0) {
+        let counts = Dictionary(grouping: plan.rows, by: \.group).mapValues(\.count)
+        return VStack(spacing: 0) {
             HStack(spacing: 14) {
                 TextField("搜索文件名、日期或建议", text: $model.search).textFieldStyle(.roundedBorder)
                 Text("\(model.filteredRows.count) 项").font(.caption).foregroundStyle(.secondary)
@@ -219,14 +229,17 @@ struct ContentView: View {
                     VStack(spacing: 3) {
                         groupButton("全部", count: plan.rows.count)
                         ForEach(plan.groups, id: \.self) { group in
-                            groupButton(group, count: plan.rows.filter { $0.group == group }.count)
+                            groupButton(group, count: counts[group] ?? 0)
                         }
                     }.padding(10)
                 }.frame(minWidth: 150, idealWidth: 185, maxWidth: 230)
                 ScrollView {
+                    if model.filteredRows.isEmpty {
+                        ContentUnavailableView("没有匹配照片", systemImage: "magnifyingglass", description: Text("清空搜索或选择其他月份后再查看。"))
+                    }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 14)], spacing: 14) {
                         ForEach(model.visibleRows) { row in
-                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: plan.isReadOnly) {
+                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: false, enlarge: { model.enlargedPhoto = row }) {
                                 if model.selected.contains(row.id) { model.selected.remove(row.id) } else { model.selected.insert(row.id) }
                             }.disabled(model.busy)
                         }
@@ -235,10 +248,8 @@ struct ContentView: View {
             }
             Divider()
             HStack(spacing: 12) {
-                if !plan.isReadOnly {
-                    Button("勾选筛选结果") { model.selected.formUnion(model.filteredRows.map(\.id)) }.disabled(model.busy)
-                    Button("清空勾选") { model.selected = [] }.disabled(model.busy)
-                }
+                Button("勾选筛选结果") { model.selected.formUnion(model.filteredRows.map(\.id)) }.disabled(model.busy)
+                Button("清空勾选") { model.selected = [] }.disabled(model.busy)
                 Spacer()
                 Button { model.pageNumber -= 1 } label: { Image(systemName: "chevron.left") }.disabled(model.pageNumber == 0)
                 Text("\(model.pageNumber + 1) / \(max(1, (model.filteredRows.count + 59) / 60))").font(.caption.monospacedDigit())
@@ -248,6 +259,13 @@ struct ContentView: View {
                         .buttonStyle(.borderedProminent).disabled(model.selected.isEmpty || model.busy)
                 }
             }.controlSize(.small).padding(15)
+            HStack {
+                Label("删除后可在“照片”的“最近删除”中恢复", systemImage: "clock.arrow.circlepath").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button(role: .destructive) { model.checkBeforeDelete() } label: {
+                    Label("删除所选 \(model.selectedPhotoCount) 张照片…", systemImage: "trash")
+                }.buttonStyle(.bordered).tint(.red).disabled(model.selected.isEmpty || model.busy)
+            }.padding(.horizontal, 15).padding(.bottom, 12)
         }
     }
     private func groupButton(_ title: String, count: Int) -> some View {
@@ -273,6 +291,30 @@ struct ContentView: View {
                 .font(.callout).foregroundStyle(.secondary)
             HStack { Spacer(); Button("返回查看") { model.confirm = false }; Button("确认写入") { model.apply() }.buttonStyle(.borderedProminent) }
         }.padding(28).frame(width: 520).interactiveDismissDisabled()
+    }
+    private var deletionConfirmation: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Label("删除 \(model.pendingDeletion?.items.count ?? 0) 张照片？", systemImage: "trash").font(.title2.bold()).foregroundStyle(.red)
+            Text("这会从照片图库中删除原照片，而不只是移出当前相册。启用 iCloud 照片时，删除会同步到其他设备。")
+            Text("照片进入“最近删除”，通常可在 30 天内恢复。点击“确认删除”即提交删除；系统可能另外弹出确认。")
+                .foregroundStyle(.secondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(model.pendingDeletion?.items ?? []) { item in
+                        HStack {
+                            Text(item.filename).textSelection(.enabled)
+                            Spacer()
+                            if !item.protected.isEmpty { Label(item.protected, systemImage: "heart.circle").foregroundStyle(.orange) }
+                        }
+                    }
+                }
+            }.frame(maxHeight: 250)
+            HStack {
+                Spacer()
+                Button("取消", role: .cancel) { model.confirmDelete = false; model.pendingDeletion = nil; model.status = "已取消删除，照片未改动" }
+                Button("确认删除", role: .destructive) { model.deleteSelected() }.buttonStyle(.borderedProminent).tint(.red)
+            }
+        }.padding(28).frame(width: 580).interactiveDismissDisabled()
     }
     private var history: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -300,9 +342,11 @@ private struct PhotoTile: View {
     let row: PlanRow
     let selected: Bool
     let readOnly: Bool
+    let enlarge: () -> Void
     let toggle: () -> Void
     @State private var image: NSImage?
     var body: some View {
+        VStack(spacing: 0) {
         Button { if !readOnly { toggle() } } label: {
             VStack(alignment: .leading, spacing: 9) {
                 ZStack(alignment: .topTrailing) {
@@ -327,6 +371,7 @@ private struct PhotoTile: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(selected ? accent : Color.primary.opacity(0.07), lineWidth: selected ? 2 : 1))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain)
+            .contextMenu { Button("放大查看", systemImage: "arrow.up.left.and.arrow.down.right") { enlarge() } }
             .help("\(row.filename)\n\(row.actionName)：\(row.target)\n\(row.note)")
             .task(id: row.previewPath) {
                 let path = row.previewPath
@@ -336,6 +381,33 @@ private struct PhotoTile: View {
                     return CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 480, kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary)
                 }.value
                 if let cg, !Task.isCancelled { image = NSImage(cgImage: cg, size: .zero) }
+            }
+            Button("放大查看", systemImage: "arrow.up.left.and.arrow.down.right") { enlarge() }
+                .buttonStyle(.link).font(.caption).padding(.vertical, 7)
+        }
+    }
+}
+
+private struct LargePhotoPreview: View {
+    let row: PlanRow
+    @Environment(\.dismiss) private var dismiss
+    @State private var image: NSImage?
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack { Text(row.filename).font(.headline); Spacer(); Button("关闭") { dismiss() }.keyboardShortcut(.cancelAction) }
+            if let image {
+                Image(nsImage: image).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else { ContentUnavailableView("暂无本地预览", systemImage: "photo", description: Text("原片可能未下载，或该视频尚无缩略图。")) }
+            Text("\(row.date) · \(row.target)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            if !row.note.isEmpty { Text(row.note).font(.caption).textSelection(.enabled) }
+        }.padding(20).frame(minWidth: 600, idealWidth: 850, maxWidth: 1100, minHeight: 500, idealHeight: 700, maxHeight: 900)
+            .task {
+                let path = row.previewPath
+                let cg = await Task.detached(priority: .utility) { () -> CGImage? in
+                    guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else { return nil }
+                    return CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 1800, kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary)
+                }.value
+                if let cg { image = NSImage(cgImage: cg, size: .zero) }
             }
     }
 }
