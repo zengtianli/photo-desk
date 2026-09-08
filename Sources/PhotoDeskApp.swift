@@ -47,6 +47,7 @@ struct PhotoDeskApp: App {
                         if model.timelineVisible { model.clearEventSelection() }
                         else { model.selected = []; model.focusedPhotoID = nil }
                     }.disabled(model.selected.isEmpty && model.selectedEventIDs.isEmpty)
+                    Button("在“照片”中打开所选照片") { if let row = model.previewRow { model.revealPhoto(row) } }.disabled(model.previewRow == nil || model.busy)
                     Button("搜索照片") { model.performAction(.search) }.keyboardShortcut("f")
                     Divider()
                     Button("删除所选照片…") { model.performAction(.delete) }.keyboardShortcut(.delete, modifiers: .command).disabled(model.selected.isEmpty || model.busy || !model.gridFocused)

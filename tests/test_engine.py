@@ -58,6 +58,19 @@ class SafetyTests(unittest.TestCase):
         result = bridge.resolve_deletion_rows(plan, ['0'], [photo(cloud_guid=None)], cfg)
         self.assertEqual(result[0]['uuid'], 'uuid')
 
+    def test_shared_cloud_guid_resolves_selected_local_duplicate(self):
+        first, second = photo(uuid='first'), photo(uuid='second')
+        plan = {'rows': [row(id='a', local_uuid='first'), row(id='b', local_uuid='second')]}
+        for photos in ([first, second], [second, first]):
+            self.assertEqual([p['uuid'] for p in bridge.resolve_deletion_rows(plan, ['a'], photos, cfg)], ['first'])
+            self.assertEqual({p['uuid'] for p in bridge.resolve_deletion_rows(plan, ['a', 'b'], photos, cfg)}, {'first', 'second'})
+        with self.assertRaises(ValueError):
+            bridge.resolve_deletion_rows(plan, ['a'], [second], cfg)
+
+    def test_legacy_ambiguous_cloud_guid_cannot_choose_arbitrary_duplicate(self):
+        with self.assertRaises(ValueError):
+            bridge.resolve_deletion_rows({'rows': [row()]}, ['0'], [photo(uuid='a'), photo(uuid='b')], cfg)
+
     def test_deletion_rejects_shared_or_missing(self):
         for photos in ([], [photo(shared=True)], [photo(shared_library=True)]):
             with self.assertRaises(ValueError): bridge.resolve_deletion_rows({'rows': [row()]}, ['0'], photos, cfg)

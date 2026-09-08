@@ -28,13 +28,15 @@ struct ProductChecks {
         precondition((reloaded.engineOptions["pet_names"] as? [String]) == ["大白", "小花"])
 
         let rows = (0..<70).map { i in
-            PlanRow(id: "\(i)", cloudGuid: "guid\(i)", localUuid: "uuid\(i)", filename: "fixture-\(i).png", date: "2026-09-08",
+            PlanRow(id: "\(i)", cloudGuid: i < 2 ? "shared-guid" : "guid\(i)", localUuid: "uuid\(i)", filename: "fixture-\(i).png", date: "2026-09-08",
                     action: "review", target: "测试", note: "", previewPath: "", originalPath: nil, isMovie: false, originalTitle: "",
                     protected: "", group: i < 35 ? "测试" : "第二组", recommended: i == 2, readOnly: i == 4)
         }
         model.page = .library
         model.plans[.library] = PhotoPlan(id: "test", kind: "library", library: "/fake", created: "", examined: rows.count, warnings: [], csvPath: "", rows: rows)
         model.selectPhoto(rows[1]); precondition(model.selected == ["1"])
+        model.selectPhoto(rows[0], modifiers: .command); precondition(model.selectedPhotoCount == 2)
+        model.selectPhoto(rows[1])
         model.selectPhoto(rows[3], modifiers: .command); precondition(model.selected == ["1", "3"])
         model.selectPhoto(rows[6], modifiers: .shift); precondition(model.selected == ["3", "5", "6"])
         precondition(model.handleNativeKey(49, modifiers: [], editingText: false, mainWindow: true))

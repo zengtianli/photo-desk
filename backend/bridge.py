@@ -226,14 +226,27 @@ def resolve_deletion_rows(plan, selected, photos, cfg):
     selected = set(selected)
     if not selected or not selected <= {r['id'] for r in plan['rows']}:
         raise ValueError('请选择当前列表中的照片。')
-    cloud_index = {p.cloud_guid: p for p in photos if p.cloud_guid}
+    cloud_index = collections.defaultdict(list)
+    for p in photos:
+        if p.cloud_guid:
+            cloud_index[p.cloud_guid].append(p)
     local_index = {p.uuid: p for p in photos}
     result = {}
     for row in plan['rows']:
         if row['id'] not in selected:
             continue
-        # Cloud GUID survives repairs; unsynced local-only assets remain bound to this library.
-        p = cloud_index.get(row['cloud_guid']) if row['cloud_guid'] else local_index.get(row.get('local_uuid'))
+        # Duplicate assets can share a Cloud GUID. Deletion must target the exact
+        # local asset shown in the selected row, never whichever duplicate the
+        # database happens to enumerate last. A missing asset cannot be replaced.
+        if row.get('local_uuid'):
+            p = local_index.get(row['local_uuid'])
+            if p is not None and row['cloud_guid'] and p.cloud_guid != row['cloud_guid']:
+                raise ValueError('所选照片标识已变化，请刷新列表后重新选择。')
+        else:
+            candidates = cloud_index.get(row['cloud_guid'], [])
+            if len(candidates) > 1:
+                raise ValueError('旧清单无法区分重复副本，请重新分析后选择。')
+            p = candidates[0] if candidates else None
         if p is None or not editable(p):
             raise ValueError('部分照片已移除或变成共享内容，请刷新列表后重试。')
         result[p.uuid] = dict(uuid=p.uuid, cloud_guid=p.cloud_guid or '',

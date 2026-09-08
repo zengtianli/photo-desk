@@ -83,6 +83,28 @@ actor BackendClient {
 /// .photoslibrary files or turn an algorithm's suggestions into automatic deletion.
 @MainActor
 enum NativePhotos {
+    static func reveal(_ uuid: String?) throws {
+        guard let uuid, let assetID = UUID(uuidString: uuid) else {
+            throw fail("这张照片缺少本地标识，请刷新列表后重试。")
+        }
+        // Photos' installed scripting dictionary exposes spotlight(media item).
+        // Only a parsed UUID is interpolated; filenames and user text are not code.
+        let source = """
+        tell application id "com.apple.Photos"
+            activate
+            spotlight (media item id "\(assetID.uuidString)/L0/001")
+        end tell
+        """
+        guard let script = NSAppleScript(source: source) else { throw fail("无法创建照片定位请求。") }
+        var detail: NSDictionary?
+        script.executeAndReturnError(&detail)
+        if let detail {
+            let code = detail[NSAppleScript.errorNumber] as? Int
+            throw fail(code == -1743
+                ? "请在系统设置 → 隐私与安全性 → 自动化中允许 PhotoDesk 控制“照片”。"
+                : "未能在“照片”中定位这张图片。请确认“照片”打开的是同一个图库，并检查图片是否仍存在。")
+        }
+    }
     static func fail(_ message: String) -> NSError {
         NSError(domain: "PhotoDesk.Photos", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }

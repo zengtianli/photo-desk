@@ -108,7 +108,7 @@ final class PhotoDeskModel: ObservableObject {
     }
     var visibleRows: [PlanRow] { Array(filteredRows.dropFirst(pageNumber * 60).prefix(60)) }
     var selectedRows: [PlanRow] { (plan?.rows ?? []).filter { selected.contains($0.id) } }
-    var selectedPhotoCount: Int { Set(selectedRows.map { $0.cloudGuid.isEmpty ? ($0.localUuid ?? $0.id) : $0.cloudGuid }).count }
+    var selectedPhotoCount: Int { Set(selectedRows.map { $0.localUuid ?? ($0.cloudGuid.isEmpty ? $0.id : $0.cloudGuid) }).count }
 
     func navigate(_ target: Page) {
         guard !busy else { return }
@@ -195,7 +195,7 @@ final class PhotoDeskModel: ObservableObject {
         guard let preview = pendingDeletion else { return }
         confirmDelete = false; applying = true
         perform("等待系统确认删除…") {
-            // Re-resolve Cloud GUIDs and library ownership after the review sheet.
+            // Revalidate exact local assets and library ownership after review.
             let current = try await self.client.execute(DeletionPreview.self, request: self.request("delete-preview", extra: ["plan_id": preview.planId, "selected": self.pendingDeleteSelection]))
             guard Set(current.items.map(\.uuid)) == Set(preview.items.map(\.uuid)) else { throw NativePhotos.fail("所选照片发生变化，请重新查看后确认。") }
             let outcome = try await NativePhotos.delete(current.items, recordRoot: Self.dataRoot)
@@ -262,6 +262,11 @@ final class PhotoDeskModel: ObservableObject {
         NSWorkspace.shared.open(Self.dataRoot)
     }
     func openPhotos() { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Photos.app")) }
+    func revealPhoto(_ row: PlanRow) {
+        guard !busy else { return }
+        do { try NativePhotos.reveal(row.localUuid); status = "已在“照片”中定位 \(row.filename)" }
+        catch { enlargedPhoto = nil; self.error = error.localizedDescription }
+    }
     func openPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!) }
     func openPhotosPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!) }
 

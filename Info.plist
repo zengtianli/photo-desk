@@ -27,7 +27,7 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>按照你确认的计划，在照片中创建相册、添加标签和补充标题。</string>
+	<string>定位你选中的照片，并按照你确认的计划创建相册、添加标签和补充标题。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>浏览和整理你的照片，并在你选中且确认后将照片移到最近删除。</string>
 </dict>

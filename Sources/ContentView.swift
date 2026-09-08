@@ -83,7 +83,7 @@ struct ContentView: View {
         .sheet(isPresented: $model.confirm) { confirmation }
         .sheet(isPresented: $model.confirmDelete) { deletionConfirmation }
         .sheet(isPresented: Binding(get: { model.enlargedPhoto != nil }, set: { if !$0 { model.enlargedPhoto = nil } })) {
-            if let row = model.enlargedPhoto { LargePhotoPreview(row: row, previous: { model.movePhoto(-1) }, next: { model.movePhoto(1) }) }
+            if let row = model.enlargedPhoto { LargePhotoPreview(row: row, previous: { model.movePhoto(-1) }, next: { model.movePhoto(1) }, reveal: { model.revealPhoto(row) }) }
         }
         .alert("导入一张验收测试图？", isPresented: $model.confirmFixture) {
             Button("取消", role: .cancel) { }
@@ -114,6 +114,9 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label(text, systemImage: "exclamationmark.circle").textSelection(.enabled)
             HStack {
+                if model.page == .duplicates {
+                    Button("重新分析重复照片") { model.error = nil; model.generate() }
+                }
                 Button("打开权限设置") { model.openPrivacy() }
                 Button("照片访问权限") { model.openPhotosPrivacy() }
                 Button("在 Finder 显示 App") { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }
@@ -254,6 +257,7 @@ struct ContentView: View {
                                     searchFocused = false
                                     model.selectEvent(event, modifiers: NSApp.currentEvent?.modifierFlags ?? [])
                                 }, open: { model.openEvent(event) }).id(event.id)
+                                    .contextMenu { Button("在“照片”中打开封面") { model.revealPhoto(event.cover) } }
                             }
                         }.frame(maxWidth: .infinity, alignment: .topLeading)
                         if model.events.isEmpty {
@@ -354,7 +358,7 @@ struct ContentView: View {
                     }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: model.preferences.thumbnailWidth), spacing: 14)], spacing: 14) {
                         ForEach(model.visibleRows) { row in
-                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: row.readOnly == true, enlarge: {
+                            PhotoTile(row: row, selected: model.selected.contains(row.id), readOnly: row.readOnly == true, reveal: { model.revealPhoto(row) }, enlarge: {
                                 model.focusedPhotoID = row.id; model.gridFocused = true; model.enlargedPhoto = row
                             }) {
                                 searchFocused = false
@@ -514,6 +518,7 @@ private struct PhotoTile: View {
     let row: PlanRow
     let selected: Bool
     let readOnly: Bool
+    let reveal: () -> Void
     let enlarge: () -> Void
     let toggle: () -> Void
     @State private var image: NSImage?
@@ -545,7 +550,10 @@ private struct PhotoTile: View {
                 .contentShape(Rectangle())
         }.buttonStyle(.plain)
             .simultaneousGesture(TapGesture(count: 2).onEnded { enlarge() })
-            .contextMenu { Button("放大查看", systemImage: "arrow.up.left.and.arrow.down.right") { enlarge() } }
+            .contextMenu {
+                Button("放大查看", systemImage: "arrow.up.left.and.arrow.down.right") { enlarge() }
+                Button("在“照片”中打开", systemImage: "photo.on.rectangle", action: reveal)
+            }
             .help("\(row.filename)\n\(row.actionName)：\(row.target)\n\(row.note)")
             .task(id: row.previewPath) {
                 let path = row.previewPath
@@ -582,6 +590,7 @@ private struct LargePhotoPreview: View {
     let row: PlanRow
     let previous: () -> Void
     let next: () -> Void
+    let reveal: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var image: NSImage?
     @State private var player: AVPlayer?
@@ -594,6 +603,7 @@ private struct LargePhotoPreview: View {
             } else { ContentUnavailableView("暂无本地预览", systemImage: "photo", description: Text("原片可能未下载，或该视频尚无缩略图。")) }
             Text("\(row.date) · \(row.target)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
             if !row.note.isEmpty { Text(row.note).font(.caption).textSelection(.enabled) }
+            Button("在“照片”中打开这张照片", systemImage: "photo.on.rectangle", action: reveal)
             Text("空格 / Esc 关闭 · ← → 查看前后照片").font(.caption).foregroundStyle(.secondary)
         }.padding(20).frame(minWidth: 600, idealWidth: 850, maxWidth: 1100, minHeight: 500, idealHeight: 700, maxHeight: 900)
             .task(id: row.id) {

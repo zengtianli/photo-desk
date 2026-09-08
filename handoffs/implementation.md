@@ -1,5 +1,11 @@
 # PhotoDesk · 2026-09-08
 
+## 最新：重复照片删不掉 + 打开系统照片
+
+真实发现 9 个 Cloud GUID 对应 18 个重复本地资产。旧 deletion resolver 的 cloud dict 最后一项覆盖，选错 UUID 并触发二次核对不一致。已改优先精确 local_uuid、校验云标识，禁止找不到原资产后换副本；selectedPhotoCount 同步按本地 UUID。27 个回归通过；真实候选逐个/整体/倒序匹配、打包引擎三次独立预检一致，未删除用户照片。
+
+新功能 NativePhotos.reveal 用 Photos.sdef spotlight(media item)，入口在照片右键、预览和菜单（首页右键打开封面）；实机从 PhotoDesk 预览跳到 Photos 同一张大白照片成功。用户要求的首页选择也已补验：单击 3 张片段只选择，Space 才预览。此前 cgWindowNotFound 阻塞已解除。详见 VALIDATION.md 顶部。
+
 ## 最新纠正：首页单击不能直接进入
 
 实际复现：详情照片单击只选择，但首页 JourneyCard 整卡 Button(action: open)，没有选择状态。已改首页单击选片段（计数同时显示照片数量）、⌘/⇧多选、Space 预览封面及方向键、独立查看入口；选择期间固定 JourneyResult 快照，防止后台改变成员。已安装修复，真实鼠标复测目前被 PhotoDesk/Finder 同时 cgWindowNotFound 阻塞，已请求用户解锁；不得将逻辑测试代替鼠标验收。测试包含 2 个片段、只读排除、选择不进入、预览保留选择、Cmd/Shift 多选及显式进入后逐张选择。
