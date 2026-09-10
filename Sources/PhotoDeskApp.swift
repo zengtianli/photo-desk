@@ -1,9 +1,59 @@
 import SwiftUI
 import AppKit
 
+/// Background capture is available only for an explicit, isolated synthetic library.
+enum PhotoDeskLaunch {
+    static var background: Bool {
+        isIsolatedBackground(ProcessInfo.processInfo.environment,
+                             home: FileManager.default.homeDirectoryForCurrentUser)
+    }
+
+    static func isIsolatedBackground(_ env: [String: String], home: URL) -> Bool {
+        guard env["PHOTODESK_BACKGROUND"] == "1",
+              let rootPath = env["PHOTODESK_DEMO_ROOT"], rootPath.hasPrefix("/"),
+              let dataPath = env["PHOTODESK_DATA_ROOT"], dataPath.hasPrefix("/"),
+              let suite = env["PHOTODESK_PREFERENCES_SUITE"],
+              suite.hasPrefix("PhotoDesk.Test."), suite.count > "PhotoDesk.Test.".count else { return false }
+        let root = URL(fileURLWithPath: rootPath).standardizedFileURL.resolvingSymlinksInPath()
+        let data = URL(fileURLWithPath: dataPath).standardizedFileURL.resolvingSymlinksInPath()
+        let normal = home.appendingPathComponent("Library/Application Support/PhotoDesk").resolvingSymlinksInPath()
+        guard root.path != normal.path, !root.path.hasPrefix(normal.path + "/"),
+              data.path.hasPrefix(root.path + "/"),
+              data.path != normal.path, !data.path.hasPrefix(normal.path + "/") else { return false }
+        var directory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: data.path, isDirectory: &directory), directory.boolValue,
+              let bytes = try? Data(contentsOf: root.appendingPathComponent("demo-input.json")),
+              let manifest = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+              manifest["format"] as? String == "photodesk-synthetic-input-v1" else { return false }
+        return true
+    }
+}
+
+private final class PhotoDeskRecordingPanel: NSPanel {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var model: PhotoDeskModel?
+    private var recordingPanel: NSPanel?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard PhotoDeskLaunch.background, let model else { return }
+        NSApp.setActivationPolicy(.accessory)
+        let panel = PhotoDeskRecordingPanel(contentRect: NSRect(x: 120, y: 120, width: 1180, height: 800),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.title = "PhotoDesk"
+        panel.identifier = NSUserInterfaceItemIdentifier("main")
+        panel.isReleasedWhenClosed = false
+        panel.hidesOnDeactivate = false
+        panel.isFloatingPanel = false
+        panel.contentView = NSHostingView(rootView: ContentView(model: model).onAppear { model.startAutomation() })
+        recordingPanel = panel
+        panel.orderBack(nil)
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if model?.applying == true {
             let alert = NSAlert(); alert.messageText = "正在写入照片图库"
@@ -14,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if ProcessInfo.processInfo.environment["PHOTODESK_BACKGROUND"] == "1" { return false }
+        if PhotoDeskLaunch.background { return false }
         for window in sender.windows where window.identifier?.rawValue == "main" {
             if window.isMiniaturized { window.deminiaturize(nil) }
             window.makeKeyAndOrderFront(nil)
@@ -25,8 +75,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 @main
 struct PhotoDeskApp: App {
-    @StateObject private var model = PhotoDeskModel()
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    @StateObject private var model: PhotoDeskModel
+
+    init() {
+        let model = PhotoDeskModel()
+        _model = StateObject(wrappedValue: model)
+        if PhotoDeskLaunch.background { delegate.model = model }
+    }
+
     var body: some Scene {
         Window("PhotoDesk", id: "main") {
             ContentView(model: model).onAppear {
@@ -34,6 +91,7 @@ struct PhotoDeskApp: App {
                 model.startAutomation()
             }
         }.defaultSize(width: 1180, height: 800)
+            .defaultLaunchBehavior(PhotoDeskLaunch.background ? .suppressed : .automatic)
             .commands {
                 CommandGroup(replacing: .appSettings) {
                     SettingsLink { Text("设置…") }.keyboardShortcut(",")
