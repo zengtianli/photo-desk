@@ -36,6 +36,11 @@ def build(preview=False):
     media_root = ROOT / 'docs/demo'
     evidence_file = media_root / 'evidence.json'
     evidence = json.loads(evidence_file.read_text()) if evidence_file.is_file() else {}
+    public_media_caption = '真实录像尚未采集，本页只供版式预览。'
+    if evidence.get('privacy_reviewed') is True:
+        public_media_caption = (
+            f'PhotoDesk v{evidence["recorded_version"]} build {evidence["recorded_build"]} · '
+            '真实原生窗口，使用10张合成图片。原速片段已剪去等待，局部放大与补拍均有标注。')
     if not preview:
         if not (evidence.get('privacy_reviewed') is True and evidence.get('synthetic_inputs') is True):
             raise SystemExit('Real recordings and privacy review are required; preview placeholders cannot be published.')
@@ -84,7 +89,7 @@ def build(preview=False):
               'PREVIEW_IMAGE': image('preview.png', 'PhotoDesk 原生图片预览窗口，显示明确标记的合成输入图像'),
               'TIMELINE_VIDEO': video('timeline.mp4', 'timeline-poster.jpg'),
               'REVIEW_VIDEO': video('review.mp4', 'review-poster.jpg'),
-              'MEDIA_CAPTION': html.escape(evidence.get('caption', '真实录像尚未采集，本页只供版式预览。'))}
+              'MEDIA_CAPTION': html.escape(public_media_caption)}
     for path in sorted(source.iterdir()):
         if path.suffix not in ('.html', '.css'):
             continue
