@@ -1,0 +1,63 @@
+{
+  "recording": {
+    "source": "real-app-window",
+    "recorded_version": "1.0.1",
+    "recorded_build": "10",
+    "release_sha256": "ca83de1b407771b86a92f3b72f60c620280077f4e2aea75c2520a4efef5e086b",
+    "recorded_at": "2026-09-10",
+    "macos": "27.0",
+    "chip": "Apple M4",
+    "synthetic_inputs": true,
+    "audio_policy": "no-audio"
+  },
+  "scenes": {
+    "timeline": {
+      "chapter": "01 / 照片时间线",
+      "raw_file": "timeline.mov",
+      "raw_sha256": "b6bf642e33f9f44e4e6d20dc611ebd7975c98d17d2468e0fd2f37424ec3dedca",
+      "raw_geometry": [1226, 930],
+      "window_crop": [23, 16, 1180, 884],
+      "poster_time": 1.0,
+      "segments": [
+        {"start": 0.6, "end": 3.4, "title": "把照片串成生活片段", "subtitle": "10 张原创合成图片，实际归集为 3 个片段。"},
+        {"start": 4.3, "end": 7.5, "title": "猫咪的日常，单独看", "subtitle": "切到猫时间线：已有猫相册中的 3 张照片聚在一起。"},
+        {"start": 9.7, "end": 12.8, "title": "会议资料也能归成一段", "subtitle": "切到会议与工作：已有相册与本机文字识别提供线索。"},
+        {"start": 15.5, "end": 18.5, "title": "回到全部，按时间浏览", "subtitle": "会议 3 张、猫咪 3 张、生活 4 张；10 张照片都有归属。"},
+        {"start": 18.5, "end": 21.0, "crop": [264, 286, 924, 337], "title": "三个片段，一目了然", "subtitle": "局部放大真实卡片；演示不连接个人 Apple 照片图库。"}
+      ],
+      "independent_result": "重新读取合成图库生产结果：total=10，analyzed=10，pending=0，failed=0，unavailable=0；三个片段成员数为 3/3/4，计划 10 行且照片标识唯一。"
+    },
+    "review": {
+      "chapter": "02 / 预览与核对",
+      "raw_file": "review.mov",
+      "raw_sha256": "fa1fc09bcdc05bc54fbfe8b64d59ad162e9fc233309954966d63d80f56b7bb44",
+      "raw_geometry": [1226, 930],
+      "window_crop": [23, 16, 1180, 884],
+      "poster_time": 4.8,
+      "supplements": {
+        "duplicates": {
+          "chapter": "02B / 重复核对 · 补拍",
+          "raw_file": "duplicates.mov",
+          "raw_sha256": "9dd78982230d91625f449e4d730572e9364a56c8b70e44a2a071ded27c4b9a61",
+          "raw_geometry": [1292, 996],
+          "window_crop": [56, 38, 1180, 884]
+        }
+      },
+      "segments": [
+        {"start": 4.3, "end": 7.5, "title": "先选中一个生活片段", "subtitle": "单击选中：底部显示 1 个片段、4 张可操作照片。"},
+        {"start": 9.6, "end": 12.8, "title": "打开快速预览，看清这一张", "subtitle": "实际打开 sample-03.png，保留原图与拍摄时间。"},
+        {"start": 12.8, "end": 15.8, "crop": [321, 115, 584, 505], "title": "放大预览，看清图片细节", "subtitle": "查看图像与文件名，再决定接下来的整理。"},
+        {"source": "duplicates", "start": 4.3, "end": 7.5, "title": "重复核对：这一段为补拍", "subtitle": "同一 build、同一合成图库，从时间线进入重复核对。"},
+        {"source": "duplicates", "start": 7.5, "end": 10.5, "crop": [472, 297, 510, 314], "title": "两份相同文件，给出保留建议", "subtitle": "原文件内容相同；2 项待核对，其中 1 项预选。"},
+        {"source": "duplicates", "start": 10.5, "end": 12.8, "title": "核对后再决定是否删除", "subtitle": "本片只展示建议与选择状态，没有执行删除。"}
+      ],
+      "independent_result": "输入 sample-01.png 与 sample-01-copy.png 字节 SHA-256 一致；生产重复计划 2 行、recommended=true 1 行。原片实际预览 sample-03.png；无效下一张及后续等待未采用，未录到关闭或删除。"
+    }
+  },
+  "review": {
+    "privacy_reviewed": true,
+    "final_visual_review": true,
+    "reviewer_role": "media-reviewer",
+    "caption": "PhotoDesk v1.0.1 build 10，Apple M4 / macOS 27.0，10 张原创合成图片输入、真实原生窗口实录。保留片段为原速，已剪去等待；局部放大与重复核对补拍均标注，字幕位于产品画面外。复核为 10 项完成识别、0 失败、3 个片段；重复 2 项、1 项预选。无效下一张操作未采用；本片未证明关闭预览、个人图库授权、Apple 相册写回或删除成功。"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "product": "PhotoDesk",
+  "recorded_version": "1.0.1",
+  "recorded_build": "10",
+  "scope": "Isolated original synthetic inputs only; no personal Photos library read or mutated.",
+  "input_manifest_sha256": "8c2225c7d17c09ba61ef7f9398e137016f241be9f51800416a9eecc78d7b6970",
+  "production_result_sha256": "8a0079897306c3dfbb32af448d15ff48dbf02ff35d984c88a9f797603ed95a21",
+  "input_count": 10,
+  "production_counts": {
+    "total": 10,
+    "analyzed": 10,
+    "pending": 0,
+    "unavailable": 0,
+    "failed": 0
+  },
+  "timeline": {
+    "events": [
+      {
+        "title": "Design review meeting（文字线索）",
+        "count": 3
+      },
+      {
+        "title": "猫咪的日常",
+        "count": 3
+      },
+      {
+        "title": "生活片段",
+        "count": 4
+      }
+    ],
+    "unique_plan_rows": 10,
+    "exact_input_membership": true
+  },
+  "duplicates": {
+    "rows": 2,
+    "preselected": 1,
+    "files": [
+      "sample-01-copy.png",
+      "sample-01.png"
+    ],
+    "file_sha256": "dea1d73271d08d780c31332492219f0eb2a765d30baeb3b982b1964bbfef8f19",
+    "bytes_equal": true
+  },
+  "preview": {
+    "observed_filename": "sample-03.png",
+    "input_sha256": "2d419608ee8e4cc215ea59381a4f9e74773b15bf90dc592effc84a3d9bc30374"
+  },
+  "not_verified": [
+    "personal Photos authorization",
+    "real library writes",
+    "photo deletion",
+    "preview next-photo navigation",
+    "preview close in the retained recording"
+  ]
+}

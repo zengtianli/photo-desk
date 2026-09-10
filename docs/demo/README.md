@@ -16,7 +16,7 @@
 
 只用 CUA 提供的 AX 按钮/字段操作；不发送共享剪贴板或系统级键盘事件。若 AX 无法触发 Space，用界面真实的放大查看入口，并如实写字幕。首次采集保留实时等待，不用剪辑证明速度。
 
-截图：`timeline.png`（首屏）、`preview.png`（实际预览）。海报：`timeline-poster.jpg`、`review-poster.jpg`（从对应原片抽帧）。MP4 采用 H.264、yuv420p、faststart，原生 controls/playsinline。原片只放 `build/tutorial/raw/`。
+截图：`timeline.png`（首屏）、`preview.png`（实际预览）。海报：`timeline-poster.jpg`、`review-poster.jpg`（从对应字幕成片抽帧）。MP4 采用 H.264、yuv420p、faststart，原生 controls/playsinline。原片只放 `build/tutorial/raw/`。
 
 完成后在此目录保存 `evidence.json`：
 

@@ -1,0 +1,41 @@
+{
+  "recording": {
+    "source": "real-app-window",
+    "recorded_version": null,
+    "recorded_build": null,
+    "release_sha256": null,
+    "recorded_at": null,
+    "macos": null,
+    "chip": null,
+    "synthetic_inputs": true,
+    "audio_policy": "no-audio"
+  },
+  "scenes": {
+    "timeline": {
+      "chapter": "01 / 照片时间线",
+      "raw_file": "timeline.mov",
+      "raw_sha256": null,
+      "raw_geometry": null,
+      "window_crop": null,
+      "poster_time": null,
+      "segments": [],
+      "independent_result": null
+    },
+    "review": {
+      "chapter": "02 / 预览与核对",
+      "raw_file": "review.mov",
+      "raw_sha256": null,
+      "raw_geometry": null,
+      "window_crop": null,
+      "poster_time": null,
+      "segments": [],
+      "independent_result": null
+    }
+  },
+  "review": {
+    "privacy_reviewed": false,
+    "final_visual_review": false,
+    "reviewer_role": "media-reviewer",
+    "caption": null
+  }
+}

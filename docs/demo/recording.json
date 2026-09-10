@@ -1,0 +1,264 @@
+{
+  "product": "PhotoDesk",
+  "recording": {
+    "source": "real-app-window",
+    "recorded_version": "1.0.1",
+    "recorded_build": "10",
+    "release_sha256": "ca83de1b407771b86a92f3b72f60c620280077f4e2aea75c2520a4efef5e086b",
+    "recorded_at": "2026-09-10",
+    "macos": "27.0",
+    "chip": "Apple M4",
+    "synthetic_inputs": true,
+    "audio_policy": "no-audio"
+  },
+  "edit_plan_sha256": "01e6dac234aed0acca4566a1ecf46b6447ac5b3859bbc34095c78081eccaf1c2",
+  "editing": {
+    "caption_bands_outside_product_image": true,
+    "retained_footage_speed": 1,
+    "local_zoom_labelled": true,
+    "removed_waits_labelled": true
+  },
+  "scenes": {
+    "timeline": {
+      "sources": {
+        "main": {
+          "raw_file": "timeline.mov",
+          "raw_sha256": "b6bf642e33f9f44e4e6d20dc611ebd7975c98d17d2468e0fd2f37424ec3dedca",
+          "raw_duration": 22.15,
+          "supplementary_capture": false,
+          "removed_seconds": 7.55
+        }
+      },
+      "cuts": [
+        {
+          "start": 0.6,
+          "end": 3.4,
+          "title": "把照片串成生活片段",
+          "subtitle": "10 张原创合成图片，实际归集为 3 个片段。",
+          "source": "main",
+          "crop": [
+            23,
+            16,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 0.0,
+          "output_end": 2.8
+        },
+        {
+          "start": 4.3,
+          "end": 7.5,
+          "title": "猫咪的日常，单独看",
+          "subtitle": "切到猫时间线：已有猫相册中的 3 张照片聚在一起。",
+          "source": "main",
+          "crop": [
+            23,
+            16,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 2.8,
+          "output_end": 6.0
+        },
+        {
+          "start": 9.7,
+          "end": 12.8,
+          "title": "会议资料也能归成一段",
+          "subtitle": "切到会议与工作：已有相册与本机文字识别提供线索。",
+          "source": "main",
+          "crop": [
+            23,
+            16,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 6.0,
+          "output_end": 9.1
+        },
+        {
+          "start": 15.5,
+          "end": 18.5,
+          "title": "回到全部，按时间浏览",
+          "subtitle": "会议 3 张、猫咪 3 张、生活 4 张；10 张照片都有归属。",
+          "source": "main",
+          "crop": [
+            23,
+            16,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 9.1,
+          "output_end": 12.1
+        },
+        {
+          "start": 18.5,
+          "end": 21.0,
+          "crop": [
+            264,
+            286,
+            924,
+            337
+          ],
+          "title": "三个片段，一目了然",
+          "subtitle": "局部放大真实卡片；演示不连接个人 Apple 照片图库。",
+          "source": "main",
+          "view": "局部放大",
+          "speed": 1,
+          "output_start": 12.1,
+          "output_end": 14.6
+        }
+      ],
+      "poster_time": 1.0,
+      "poster_sha256": "ed8289df7ce7f7f8d3c82aff5b079defdb0ff68144881b1805a77c8cf85fb0b8",
+      "independent_result": "重新读取合成图库生产结果：total=10，analyzed=10，pending=0，failed=0，unavailable=0；三个片段成员数为 3/3/4，计划 10 行且照片标识唯一。",
+      "checks": {
+        "duration": 14.6,
+        "sha256": "e8af0e076171081f8a3cde588555359b06473fe8d73757d1cca8cd2642143bfd",
+        "bytes": 423345,
+        "decode": "passed",
+        "black_frames": "none >= 0.2s at 98% of product-image area"
+      }
+    },
+    "review": {
+      "sources": {
+        "main": {
+          "raw_file": "review.mov",
+          "raw_sha256": "fa1fc09bcdc05bc54fbfe8b64d59ad162e9fc233309954966d63d80f56b7bb44",
+          "raw_duration": 28.08,
+          "supplementary_capture": false,
+          "removed_seconds": 18.68
+        },
+        "duplicates": {
+          "raw_file": "duplicates.mov",
+          "raw_sha256": "9dd78982230d91625f449e4d730572e9364a56c8b70e44a2a071ded27c4b9a61",
+          "raw_duration": 13.035,
+          "supplementary_capture": true,
+          "removed_seconds": 4.535
+        }
+      },
+      "cuts": [
+        {
+          "start": 4.3,
+          "end": 7.5,
+          "title": "先选中一个生活片段",
+          "subtitle": "单击选中：底部显示 1 个片段、4 张可操作照片。",
+          "source": "main",
+          "crop": [
+            23,
+            16,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 0.0,
+          "output_end": 3.2
+        },
+        {
+          "start": 9.6,
+          "end": 12.8,
+          "title": "打开快速预览，看清这一张",
+          "subtitle": "实际打开 sample-03.png，保留原图与拍摄时间。",
+          "source": "main",
+          "crop": [
+            23,
+            16,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 3.2,
+          "output_end": 6.4
+        },
+        {
+          "start": 12.8,
+          "end": 15.8,
+          "crop": [
+            321,
+            115,
+            584,
+            505
+          ],
+          "title": "放大预览，看清图片细节",
+          "subtitle": "查看图像与文件名，再决定接下来的整理。",
+          "source": "main",
+          "view": "局部放大",
+          "speed": 1,
+          "output_start": 6.4,
+          "output_end": 9.4
+        },
+        {
+          "source": "duplicates",
+          "start": 4.3,
+          "end": 7.5,
+          "title": "重复核对：这一段为补拍",
+          "subtitle": "同一 build、同一合成图库，从时间线进入重复核对。",
+          "crop": [
+            56,
+            38,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 9.4,
+          "output_end": 12.6
+        },
+        {
+          "source": "duplicates",
+          "start": 7.5,
+          "end": 10.5,
+          "crop": [
+            472,
+            297,
+            510,
+            314
+          ],
+          "title": "两份相同文件，给出保留建议",
+          "subtitle": "原文件内容相同；2 项待核对，其中 1 项预选。",
+          "view": "局部放大",
+          "speed": 1,
+          "output_start": 12.6,
+          "output_end": 15.6
+        },
+        {
+          "source": "duplicates",
+          "start": 10.5,
+          "end": 12.8,
+          "title": "核对后再决定是否删除",
+          "subtitle": "本片只展示建议与选择状态，没有执行删除。",
+          "crop": [
+            56,
+            38,
+            1180,
+            884
+          ],
+          "view": "真实窗口",
+          "speed": 1,
+          "output_start": 15.6,
+          "output_end": 17.9
+        }
+      ],
+      "poster_time": 4.8,
+      "poster_sha256": "1964c7c3dc854e9438bebb7a674299aa44799e74bd96fe7fbe28e759406698b0",
+      "independent_result": "输入 sample-01.png 与 sample-01-copy.png 字节 SHA-256 一致；生产重复计划 2 行、recommended=true 1 行。原片实际预览 sample-03.png；无效下一张及后续等待未采用，未录到关闭或删除。",
+      "checks": {
+        "duration": 17.9,
+        "sha256": "70604e396ad34d86ec3977f8366a6e1083dc9dbdf787f488224a4a0ff34b12d1",
+        "bytes": 534183,
+        "decode": "passed",
+        "black_frames": "none >= 0.2s at 98% of product-image area"
+      }
+    }
+  },
+  "final_visual_review": "confirmed-by-media-reviewer"
+}

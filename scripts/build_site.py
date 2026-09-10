@@ -89,6 +89,8 @@ def build(preview=False):
         if path.suffix not in ('.html', '.css'):
             continue
         text = path.read_text()
+        if path.suffix == '.html':
+            text = text.replace('href="style.css"', f'href="style.css?v={digest(source / "style.css")[:12]}"')
         for key, value in values.items():
             text = text.replace('{{' + key + '}}', value)
         if re.search(r'\{\{[A-Z_]+\}\}', text):
