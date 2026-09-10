@@ -23,6 +23,16 @@ import yaml
 from photocli import classify, lib, ocr, title, triage
 
 
+def load_db(library=None):
+    demo_root = os.environ.get('PHOTODESK_DEMO_ROOT')
+    if demo_root:
+        from demo import Library
+        if not ROOT.resolve().is_relative_to(Path(demo_root).resolve()):
+            raise ValueError('演示模式要求独立数据目录；未访问系统照片图库。')
+        return Library(demo_root)
+    return lib.load_db(library)
+
+
 def now():
     return dt.datetime.now(dt.timezone.utc).astimezone().isoformat()
 
@@ -42,6 +52,9 @@ def progress(request, text, done=0, total=0):
 
 def config(request):
     cfg = yaml.safe_load((BASE / 'defaults.yaml').read_text())
+    if os.environ.get('PHOTODESK_DEMO_ROOT'):
+        cfg['library'] = os.environ['PHOTODESK_DEMO_ROOT']
+        return lib.Config(cfg)
     library = request.get('library', '').strip()
     if library:
         path = Path(library).expanduser().resolve()
@@ -77,7 +90,7 @@ def item(row, photo, number, cfg):
 
 def audit(request, cfg):
     progress(request, '正在读取图库…')
-    db = lib.load_db(cfg.library)
+    db = load_db(cfg.library)
     photos = db.photos()
     personal = [p for p in photos if editable(p)]
     years = collections.Counter(str(p.date.year) if p.date else '未知' for p in personal)
@@ -113,7 +126,7 @@ def cached_ocr(photo, request, position, count):
 def build_plan(request, cfg):
     kind = request['kind']
     progress(request, '正在读取图库，生成整理建议…')
-    db = lib.load_db(cfg.library)
+    db = load_db(cfg.library)
     if kind == 'library':
         members = [p for p in db.photos() if editable(p)]
         members.sort(key=lambda p: p.date.timestamp() if p.date else 0, reverse=True)
@@ -371,6 +384,9 @@ def main():
         request = json.load(sys.stdin)
         with contextlib.redirect_stdout(sys.stderr):
             command = request.get('command', 'ping')
+            if os.environ.get('PHOTODESK_DEMO_ROOT'):
+                if command in ('apply', 'delete-preview') or (command == 'plan' and request.get('kind') != 'library'):
+                    raise ValueError('合成演示图库只用于归集、预览与重复核对；未访问或改动 Apple 照片。')
             if command == 'ping':
                 import osxphotos
                 data = {'message': '引擎就绪', 'version': osxphotos.__version__, 'data_root': str(ROOT)}

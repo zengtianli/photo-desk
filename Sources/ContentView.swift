@@ -57,6 +57,11 @@ struct ContentView: View {
             }.navigationSplitViewColumnWidth(min: 210, ideal: 225, max: 255)
         } detail: {
             VStack(spacing: 0) {
+                if ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] != nil {
+                    Text("合成演示图库 · 真实本机归集与识别 · 不连接 Apple 照片")
+                        .font(.caption).frame(maxWidth: .infinity).padding(8)
+                        .background(accent.opacity(0.10))
+                }
                 header
                 if let error = model.error { errorBanner(error) }
                 Group {

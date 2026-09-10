@@ -83,7 +83,13 @@ actor BackendClient {
 /// .photoslibrary files or turn an algorithm's suggestions into automatic deletion.
 @MainActor
 enum NativePhotos {
+    private static func requireRealLibrary() throws {
+        if ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] != nil {
+            throw fail("合成演示图库不连接 Apple“照片”；写入、删除和系统定位均未执行。")
+        }
+    }
     static func reveal(_ uuid: String?) throws {
+        try requireRealLibrary()
         guard let uuid, let assetID = UUID(uuidString: uuid) else {
             throw fail("这张照片缺少本地标识，请刷新列表后重试。")
         }
@@ -109,6 +115,7 @@ enum NativePhotos {
         NSError(domain: "PhotoDesk.Photos", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
     static func authorize() async throws {
+        try requireRealLibrary()
         let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
         guard status == .authorized || status == .limited else {
             throw fail("请在系统设置 → 隐私与安全性 → 照片中允许 PhotoDesk 访问照片，然后重试。")

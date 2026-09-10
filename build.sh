@@ -7,6 +7,7 @@ cd "$(dirname "$0")"
 python3 scripts/vendor_engine.py
 if [[ "${SKIP_ENGINE_BUILD:-0}" != 1 ]]; then bash scripts/build_engine.sh; fi
 [[ -x build/engine/photo-engine/photo-engine ]]
+uv run python scripts/collect_notices.py
 DISPLAY_NAME="$(sed -n 's/^display_name: //p' catalog.yaml)"
 mkdir -p build
 xcodebuild -project PhotoDesk.xcodeproj -scheme PhotoDesk -configuration Release \
@@ -22,6 +23,7 @@ if [[ -d "$RES/Engine" ]]; then
 fi
 ditto build/engine/photo-engine "$RES/Engine"
 cp icon/AppIcon.icns "$RES/AppIcon.icns"
+cp build/THIRD_PARTY_NOTICES.txt "$RES/THIRD_PARTY_NOTICES.txt"
 plutil -replace CFBundleDisplayName -string "$DISPLAY_NAME" "$APP/Contents/Info.plist"
 plutil -replace CFBundleName -string "$DISPLAY_NAME" "$APP/Contents/Info.plist"
 plutil -replace CFBundleIconFile -string AppIcon "$APP/Contents/Info.plist"

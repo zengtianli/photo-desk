@@ -11,7 +11,7 @@ protect:
   named_persons: true
   keywords: ["🔒敏感", "_keep"]
 classify:
-  pet_faces: ["大白"]
+  pet_faces: []
   scene_labels: ["Cat", "Document", "Food", "Plant", "Sky"]
 ocr:
   candidate_labels: ["Document", "Menu", "Receipt"]

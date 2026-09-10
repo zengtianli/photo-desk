@@ -16,6 +16,11 @@ def photo(hour=10, **kw):
 
 
 class Connections(unittest.TestCase):
+    def test_distributed_defaults_do_not_name_a_strangers_pet(self):
+        m = journey.meaning(photo(albums=['大白']), {}, set())
+        self.assertNotIn('猫时间线', m['tracks'])
+        self.assertIn('猫时间线', journey.meaning(photo(albums=['猫咪']), {}, set())['tracks'])
+
     def test_existing_cat_identity_is_not_invented(self):
         named = journey.meaning(photo(persons=['大白']), {}, {'大白'})
         unnamed = journey.meaning(photo(), {'labels': {'cat': .88}}, {'大白'})

@@ -24,3 +24,4 @@ depends_on: []
 runtime: bundled-python
 owner: tianli
 docs: README.md
+homepage: https://app-mac-photodesk.tianli.cyou/

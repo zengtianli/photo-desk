@@ -95,12 +95,17 @@ final class PhotoDeskModel: ObservableObject {
     private var pendingDeleteSelection: [String] = []
     @Published var history: [HistoryEntry] = []
     @Published var ocrLimit = 100
-    @Published var library = PhotoPreferences.defaults.string(forKey: "library") ?? ""
+    @Published var library = ProcessInfo.processInfo.environment["PHOTODESK_LIBRARY"] ?? PhotoPreferences.defaults.string(forKey: "library") ?? ""
     let client = BackendClient()
     private var task: Task<Void, Never>?
     private var poller: Task<Void, Never>?
     private var requestID = ""
-    static let dataRoot = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/PhotoDesk")
+    static let dataRoot: URL = {
+        if let path = ProcessInfo.processInfo.environment["PHOTODESK_DATA_ROOT"], path.hasPrefix("/") {
+            return URL(fileURLWithPath: path, isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/PhotoDesk")
+    }()
     var plan: PhotoPlan? { plans[page] }
     var filteredRows: [PlanRow] {
         (plan?.rows ?? []).filter { (group == "全部" || $0.group == group) &&
@@ -237,6 +242,9 @@ final class PhotoDeskModel: ObservableObject {
         }
     }
     func chooseLibrary() {
+        guard ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] == nil else {
+            error = "当前为独立合成演示图库。退出演示后再连接自己的图库。"; return
+        }
         let panel = NSOpenPanel()
         panel.title = "选择照片图库"; panel.prompt = "连接图库"
         panel.canChooseFiles = true; panel.canChooseDirectories = true
@@ -261,7 +269,12 @@ final class PhotoDeskModel: ObservableObject {
         try? FileManager.default.createDirectory(at: Self.dataRoot, withIntermediateDirectories: true)
         NSWorkspace.shared.open(Self.dataRoot)
     }
-    func openPhotos() { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Photos.app")) }
+    func openPhotos() {
+        guard ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] == nil else {
+            error = "合成演示图库不连接 Apple“照片”。"; return
+        }
+        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Photos.app"))
+    }
     func revealPhoto(_ row: PlanRow) {
         guard !busy else { return }
         do { try NativePhotos.reveal(row.localUuid); status = "已在“照片”中定位 \(row.filename)" }
@@ -384,6 +397,7 @@ final class PhotoDeskModel: ObservableObject {
     func performAction(_ action: PhotoAction) {
         switch action {
         case .toggleWindow:
+            if ProcessInfo.processInfo.environment["PHOTODESK_BACKGROUND"] == "1" { return }
             NSApp?.activate(ignoringOtherApps: true)
             if let window = NSApp?.windows.first(where: { $0.identifier?.rawValue == "main" }) {
                 window.deminiaturize(nil); window.makeKeyAndOrderFront(nil)

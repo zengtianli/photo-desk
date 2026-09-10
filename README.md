@@ -2,6 +2,8 @@
 
 原生 macOS 照片时间线。打开即自动扫描整个图库，把生活、猫咪、人物、会议与资料联系起来，并准备重复照片清理建议。
 
+产品主页与安装教程：[PhotoDesk](https://app-mac-photodesk.tianli.cyou/)。主页发布状态以实际访问结果为准。
+
 ## 使用
 
 打开 `/Applications/PhotoDesk.app`。默认读取最近打开的照片图库，也可从右上角选择 `.photoslibrary`。
@@ -62,3 +64,11 @@ Xcode 选择和图标工厂复用总部现有引擎。构建产物位于 `build/
 引擎诊断：`build/engine/photo-engine/photo-engine` 接受 JSON stdin，例如 `{"command":"audit"}`、`{"command":"ocr-probe"}`。只读分析结果可用 `tests/contract_check.swift` 经实际 Swift 模型与解码器验证；原图库写入不得用作无人值守测试数据。
 
 第三方来源：[osxphotos](https://github.com/RhetTbull/osxphotos)、[PyInstaller 打包说明](https://pyinstaller.org/en/stable/usage.html)。osxphotos 0.76.1 包含 macOS 27 初步兼容修复，仍需针对实际系统验证。
+
+## 直接分发与主页
+
+`python3 scripts/release.py` 构建但不装机，在 `dist/` 生成 ZIP、SHA-256 和 `release.json`，并从移动后的应用包检查内置运行时、合成 OCR、缺失图库与错误契约。只读检查不访问系统照片；不能代替新电脑上的首次授权、GUI 或删除恢复验收。包内包含第三方许可，产品源码保持私有。
+
+`python3 scripts/build_site.py --preview` 生成亮色预览到 `build/site/`。真实截图、视频和证据契约见 [docs/demo/README.md](docs/demo/README.md)。正式 `python3 scripts/build_site.py` 要求完整发行包和经过核对的真实媒体；公开文件通过 `site-manifest.json` 白名单交给既有站群部署入口，禁止同步源码目录或原始录屏。
+
+分发版默认宠物名字为空；已有保存设置保持原样。`PHOTODESK_PREFERENCES_SUITE`、`PHOTODESK_DATA_ROOT`、`PHOTODESK_DEMO_ROOT` 用于独立合成验收；演示隔离强制拒绝连接、修改系统 Photos 图库，不是通用文件夹导入功能。

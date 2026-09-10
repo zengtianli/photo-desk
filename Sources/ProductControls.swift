@@ -19,13 +19,17 @@ struct PhotoPreferences: Codable, Equatable {
     var eventHours = 3
     var eventKilometers = 8
     var meetingMinutes = 90
-    var petNames = "大白"
+    var petNames = ""
     var preselectDuplicates = true
     var thumbnailWidth = 180.0
     var appearance = "system"
     var initialTrack = "全部"
     static func load() -> Self {
-        guard let data = defaults.data(forKey: storageKey), var value = try? JSONDecoder().decode(Self.self, from: data) else { return Self() }
+        guard let data = defaults.data(forKey: storageKey), var value = try? JSONDecoder().decode(Self.self, from: data) else {
+            var fresh = Self()
+            if ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] != nil { fresh.appearance = "light" }
+            return fresh
+        }
         value.refreshSeconds = max(30, min(3600, value.refreshSeconds))
         value.batchSize = max(1, min(24, value.batchSize))
         value.eventHours = max(1, min(12, value.eventHours))
@@ -65,7 +69,7 @@ struct PhotoSettingsView: View {
                     LabeledContent("照片大小") { Slider(value: $model.preferences.thumbnailWidth, in: 140...280, step: 10).frame(width: 200) }
                 }
                 Section("图库与本地数据") {
-                    Text(model.library.isEmpty ? "当前使用“照片”最近打开的图库" : model.library).textSelection(.enabled).font(.caption)
+                    Text(ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] != nil ? "合成演示图库（独立样例）" : model.library.isEmpty ? "当前使用“照片”最近打开的图库" : model.library).textSelection(.enabled).font(.caption)
                     Button("选择图库…") { model.chooseLibrary() }
                     Toggle("时间线包含共享相册（只读）", isOn: $model.preferences.includeShared)
                     Button("打开本地数据与记录") { model.openRecords() }

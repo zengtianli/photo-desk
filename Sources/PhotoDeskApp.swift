@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if ProcessInfo.processInfo.environment["PHOTODESK_BACKGROUND"] == "1" { return false }
         for window in sender.windows where window.identifier?.rawValue == "main" {
             if window.isMiniaturized { window.deminiaturize(nil) }
             window.makeKeyAndOrderFront(nil)
@@ -66,7 +67,10 @@ struct PhotoDeskApp: App {
                     Button("导入验收测试图…") { model.confirmFixture = true }.disabled(model.busy)
                 }
                 CommandGroup(replacing: .help) {
-                    SettingsLink { Text("PhotoDesk 使用帮助与快捷键") }
+                    Button("PhotoDesk 安装与使用教程") {
+                        if let url = URL(string: "https://app-mac-photodesk.tianli.cyou/#start") { NSWorkspace.shared.open(url) }
+                    }
+                    SettingsLink { Text("PhotoDesk 设置与快捷键") }
                 }
             }
         Settings { PhotoSettingsView(model: model, shortcuts: model.shortcuts) }

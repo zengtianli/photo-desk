@@ -14,7 +14,7 @@ import bisect
 VERSION = 'journey-2'
 MEETING = re.compile(r'会议|会场|议程|研讨|汇报|座谈|评审|培训|讲座|conference|meeting|agenda', re.I)
 WORK = re.compile(r'工程|项目|施工|设计|报告|合同|投标|验收|水利|水库|图纸|工作')
-CAT_ALBUM = re.compile(r'猫|cats?|大白', re.I)
+CAT_ALBUM = re.compile(r'猫|cats?', re.I)
 
 
 def digest(value):
@@ -213,7 +213,7 @@ def duplicates(photos, api, cfg, connection):
 
 
 def run(request, cfg, api):
-    db = api.lib.load_db(cfg.library)
+    db = api.load_db(cfg.library)
     cfg.raw['library'] = str(db.library_path)
     photos = db.photos()
     options = request.get('options', {})

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f6f5f0">
+  <title>PhotoDesk — 让照片，重新成为回忆</title>
+  <meta name="description" content="PhotoDesk 是原生 Mac 照片时间线。在本机联系生活、猫咪与工作片段，边浏览边核对重复照片，删除始终由你决定。">
+  <link rel="canonical" href="https://app-mac-photodesk.tianli.cyou/">
+  <link rel="icon" type="image/png" href="images/app-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+  <header class="nav wrap"><a class="brand" href="#"><img src="images/app-icon.png" width="38" height="38" alt="">PhotoDesk</a><nav aria-label="主导航"><a href="#features">功能</a><a href="#demo">演示</a><a href="#start">安装</a><a href="#faq">帮助</a></nav><a class="button small" href="{{DOWNLOAD_URL}}" download>下载 Mac 版 <span aria-hidden="true">↗</span></a></header>
+  <main id="main">
+    <section class="hero wrap">
+      <div class="hero-copy"><p class="eyebrow"><span></span> 原生 Mac 照片时间线</p><h1>让照片，<br>重新成为<span>回忆。</span></h1><p class="lead">生活里的小片段、猫咪的一天天、工作中留下的线索。<br class="desktop">PhotoDesk 在你的 Mac 上，把它们联系起来。</p><div class="actions"><a class="button" href="{{DOWNLOAD_URL}}" download>下载 PhotoDesk <span aria-hidden="true">↓</span></a><a class="text-link" href="#demo">看看它怎么整理 <span aria-hidden="true">→</span></a></div><p class="release-line">v{{VERSION}} · {{SIZE}} · Apple Silicon · macOS {{MIN_MACOS}}+</p><p class="signing-note">直接下载版，尚未公证。首次打开请按<a href="#start">安装步骤</a>操作。</p></div>
+      <div class="hero-art"><div class="photo-note"><span class="dot"></span> 回忆有了顺序，找起来就轻松了。</div><figure class="screen hero-screen">{{TIMELINE_IMAGE}}<figcaption>PhotoDesk 原生界面 · 使用合成演示图库实录</figcaption></figure><div class="little-note"><span aria-hidden="true">✦</span> 本机归集，不上传照片</div></div>
+    </section>
+    <div class="values wrap"><p><span>01</span> 打开，就开始联系照片</p><p><span>02</span> 已做的识别，下次接着用</p><p><span>03</span> 先核对，再决定是否删除</p></div>
+
+    <section class="section wrap" id="features"><div class="section-heading"><p class="eyebrow">不只是一排缩略图</p><h2>从“拍过什么”，<br>到“那天发生了什么”。</h2><p>时间、人物、地点、已有相册，加上本机内容识别，<br class="desktop">让散落的照片成为可以浏览的片段。</p></div>
+      <div class="feature-grid"><article><span class="feature-icon" aria-hidden="true">◷</span><p class="label">我的时间线</p><h3>生活自己排好顺序</h3><p>相近时间、相近地点、相同主题的照片聚成一个片段。点击先选中，进入片段后再逐张看。</p></article><article><span class="feature-icon" aria-hidden="true">♡</span><p class="label">猫时间线</p><h3>那些每天都想留下的瞬间</h3><p>结合已有猫相册、你命名的宠物和本机分类。识别到猫，也会明确告诉你个体还未确认。</p></article><article><span class="feature-icon" aria-hidden="true">▤</span><p class="label">会议与工作</p><h3>把现场和资料放在一起看</h3><p>从会议场景、已有标题及本地 OCR 找线索。按时间关联的资料会说明推断依据，方便再核对。</p></article></div>
+    </section>
+
+    <section class="browse-section"><div class="wrap split"><figure class="screen">{{PREVIEW_IMAGE}}<figcaption>选中、预览、翻图，都在原生窗口里。</figcaption></figure><div><p class="eyebrow">熟悉的 Mac 手感</p><h2>先看清楚，<br>再做决定。</h2><p class="body-copy">单击选中，空格预览；方向键翻图，Esc 回到列表。多选、搜索和设置保持熟悉的操作，不用先学一套新手势。</p><div class="keys"><p><kbd>Space</kbd><span>快速预览</span></p><p><kbd>⌘</kbd><span>多选或取消单张</span></p><p><kbd>⌘ F</kbd><span>搜索当前内容</span></p><p><kbd>⌘ ,</kbd><span>原生设置</span></p></div><p class="quiet">自定义快捷键默认留空，由你选择，不抢已有的全局按键。</p></div></div></section>
+
+    <section class="section wrap" id="demo"><div class="section-heading"><p class="eyebrow">跟着实际界面走一遍</p><h2>两段演示，<br>看看结果怎么来的。</h2><p>视频来自 PhotoDesk 原生窗口。样例是明确标记的合成图像，<br class="desktop">实际执行本机归集与识别，不含任何个人照片。</p></div><div class="videos"><article><div class="video-number">01 <span>联系照片</span></div>{{TIMELINE_VIDEO}}<h3>从时间线，找到猫咪与工作片段</h3><p>看实际归集进度，切换时间线与分类。先完成元数据归集，再逐步补充内容识别。</p><a class="text-link" href="media/timeline.mp4" download>下载这段演示 ↓</a></article><article><div class="video-number">02 <span>浏览与核对</span></div>{{REVIEW_VIDEO}}<h3>选中、预览，再检查重复建议</h3><p>点击先选择，逐张看原图，再核对相同文件的保留理由。演示不执行系统图库删除。</p><a class="text-link" href="media/review.mp4" download>下载这段演示 ↓</a></article></div><p class="media-detail">{{MEDIA_CAPTION}} 图库授权、Apple 相册写回及删除恢复未在这些合成样例视频中演示。</p></section>
+
+    <section class="section wrap"><div class="local-card"><div><p class="eyebrow">照片留在你这里</p><h2>在本机理解，<br>由你掌握分寸。</h2></div><div><p>分类与文字识别使用 Apple Vision，在你的 Mac 上完成。PhotoDesk 不上传照片，也不调用云端模型。</p><p>已经识别的内容会保存在本地，新照片继续增量处理；自动联系的时间线也留在 PhotoDesk，不向 Apple“照片”批量新建相册。</p><p class="quiet">原片未下载时会显示缺失内容，不自动下载，不把“没读到”当成“没有价值”。</p></div></div></section>
+
+    <section class="section wrap" id="start"><div class="section-heading"><p class="eyebrow">第一次使用</p><h2>从下载，到第一条时间线。</h2><p>你需要一台 M 系列芯片的 Mac，以及 Apple“照片”图库。<br class="desktop">PhotoDesk 已包含运行所需组件，不需要另外安装开发工具。</p></div><ol class="steps"><li><span>1</span><div><h3>下载并放进“应用程序”</h3><p>下载 ZIP，双击解压。在 Finder 中将 PhotoDesk.app 拖入“应用程序”，再从那里打开。</p><a class="text-link" href="{{DOWNLOAD_URL}}" download>下载 v{{VERSION}} · {{SIZE}} ↓</a></div></li><li><span>2</span><div><h3>按 macOS 的提示允许打开</h3><p>本版采用本地签名，尚未公证。若被阻止，先核对下载来源，再到“系统设置 → 隐私与安全性”查看本次阻止记录，按系统提供的“仍要打开”操作。</p><p class="quiet">如需认证，使用这台 Mac 的登录密码或 Touch ID。无需提供 Apple ID 密码，也不必关闭 SIP 或全局关闭 Gatekeeper。</p></div></li><li><span>3</span><div><h3>允许读取图库</h3><p>如果出现“无法访问照片”，到“隐私与安全性 → 完全磁盘访问权限”添加并启用 PhotoDesk，然后退出、重新打开。</p><p class="quiet">删除还需要单独的“照片”访问权限；高级相册写回或系统定位可能询问“自动化”权限。只在你使用对应功能时按系统提示授权。</p></div></li><li><span>4</span><div><h3>边整理，边浏览</h3><p>默认读取“照片”最近打开的图库，也可点“选择图库”指定 .photoslibrary。首页出现时间片段后便可浏览；后台识别继续进行，进度会显示实际处理数量。</p><p class="quiet">想暂停、改整理范围或设置快捷键，按 ⌘, 打开设置。</p></div></li></ol></section>
+
+    <section class="section wrap" id="results"><div class="section-heading"><p class="eyebrow">看见什么，意味着什么</p><h2>每个结果，都留有核对余地。</h2></div><div class="result-grid"><article><span class="pill">时间线已归集</span><h3>可以开始浏览了</h3><p>照片已按元数据组成片段。后台仍可能继续识别内容，归集完成不等于每张都已识别完。</p></article><article><span class="pill amber">缺少原片 / 内容未完成</span><h3>保留待核对状态</h3><p>需要时先在 Apple“照片”下载对应原片，再回 PhotoDesk 刷新。不要仅凭缺失识别结果做删除判断。</p></article><article><span class="pill">重复清理建议</span><h3>建议只是预选</h3><p>只有字节一致且保留副本覆盖独有元数据时才预选。收藏、隐藏、编辑版本、视频和 Live Photo 留给你核对。</p></article></div><div class="delete-note"><h3>删除原照片之前，请再确认一次。</h3><p>你明确选择并确认后，PhotoDesk 才向系统提交删除。删除会随 iCloud 同步；恢复使用 Apple“照片”的“最近删除”，期限以系统显示为准。共享内容保持只读。演示模式无法操作系统图库。</p></div></section>
+
+    <section class="section wrap faq" id="faq"><div class="section-heading"><p class="eyebrow">卡住时，看这里</p><h2>常见问题</h2></div><div class="faq-list"><details><summary>它会自动删除照片吗？</summary><p>不会。后台只准备建议。你需要核对并确认精确的选择范围，系统还可能再询问一次。相似画面不等于完全重复；PhotoDesk 不比较 Live Photo 的完整动态内容，也不会替你判断旧票据是否已经报销。</p></details><details><summary>为什么已经给了“照片”权限，仍然读不到图库？</summary><p>“照片”访问权限和“完全磁盘访问权限”是两项不同的权限。读取图库遇到权限错误时，请按应用提示在“完全磁盘访问权限”启用 PhotoDesk，并退出重开。若仍失败，检查所选图库是否存在、是否是你想整理的图库。</p></details><details><summary>macOS 提示无法验证开发者，怎么办？</summary><p>当前是本地签名、尚未公证的直接分发包。核对本页来源后，在“隐私与安全性”查看本次阻止记录并按系统提供的允许入口操作。如果系统没有该入口，请保留原始提示联系帮助，不需要关闭整台 Mac 的安全检查。</p></details><details><summary>照片会上传给人工智能服务吗？</summary><p>不会。PhotoDesk 的照片分析和 OCR 在本机执行，不调用外部模型。Apple“照片”自身的 iCloud 同步由你的系统设置决定；PhotoDesk 不替你更改它。</p></details><details><summary>猫咪、人物或会议被分错了怎么办？</summary><p>分类属于待核对的联系线索。到设置填写已在“照片”命名的猫，或调整事件间隔、距离和资料关联范围。按时间推断的资料会显示依据，未命名的猫不会被擅自当成某个个体。</p></details><details><summary>第一轮整理比较久，可以先退出吗？</summary><p>可以暂停或退出，已完成的识别缓存在本地，下次继续。已经进入写入及核对阶段时，请等当前操作结束再退出。处理速度取决于图库数量、本地原片可用性和 Mac 性能。</p></details><details><summary>支持 Intel Mac 或其他图片文件夹吗？</summary><p>当前下载包面向 Apple Silicon，要求 macOS {{MIN_MACOS}} 或更新版本，正式整理入口是 Apple“照片”图库。网页视频中的独立合成图库是隔离演示输入，不代表通用文件夹导入功能。</p></details><details><summary>怎样反馈问题，又不发出个人照片？</summary><p>记录 PhotoDesk 版本、macOS 版本、操作步骤和屏幕上的错误文字。先检查截图中的照片、地点、文件名与人物信息，遮去私人内容；不要直接发送整个图库、本地识别缓存或整理历史。</p><a href="https://tianli.cyou/">查看维护者主页</a></details></div></section>
+
+    <section class="download wrap" id="download"><img src="images/app-icon.png" width="88" height="88" alt="PhotoDesk 图标"><p class="eyebrow">给回忆一个好位置</p><h2>下一次找照片，<br>从一段回忆开始。</h2><a class="button" href="{{DOWNLOAD_URL}}" download>下载 PhotoDesk <span aria-hidden="true">↓</span></a><p>v{{VERSION}} · {{SIZE}} · Apple Silicon · macOS {{MIN_MACOS}}+</p><details class="checksum"><summary>版本与文件校验</summary><p>构建 {{BUILD}} · 本地签名 · 尚未公证</p><code>{{SHA256}}</code><p><a href="release.json">发行信息</a> · <a href="downloads/{{FILENAME}}.sha256">SHA-256 校验文件</a> · <a href="third-party-notices.txt">第三方许可</a></p></details></section>
+  </main>
+  <footer class="wrap"><a class="brand" href="#">PhotoDesk</a><p>在 Mac 上整理，照片留在你这里。</p><div><a href="#start">安装教程</a><a href="#faq">帮助</a><a href="privacy.html">隐私说明</a><a href="changelog.html">更新记录</a></div></footer>
+</body>
+</html>

@@ -20,6 +20,7 @@ struct ProductChecks {
         defer { defaults.removePersistentDomain(forName: suite) }
         let model = PhotoDeskModel()
         precondition(model.preferences.automatic)
+        precondition(model.preferences.petNames.isEmpty)
         model.preferences.automatic = false
         model.preferences.thumbnailWidth = 230
         model.preferences.petNames = "大白，小花"
