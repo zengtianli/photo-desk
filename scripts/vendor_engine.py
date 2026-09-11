@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path('/Users/tianli/Apps/data/apple/photo/photocli/photocli')
+SOURCE = Path('/Users/tianli/Apps/apple-data/engine/photo/photocli/photocli')
 DEST = ROOT / 'vendor/photocli'
 
 def main():

@@ -8,7 +8,7 @@ python3 scripts/vendor_engine.py
 if [[ "${SKIP_ENGINE_BUILD:-0}" != 1 ]]; then bash scripts/build_engine.sh; fi
 [[ -x build/engine/photo-engine/photo-engine ]]
 uv run python scripts/collect_notices.py
-DISPLAY_NAME="$(sed -n 's/^display_name: //p' catalog.yaml)"
+DISPLAY_NAME="$(sed -n 's/^display_name: //p' project.yaml)"
 mkdir -p build
 xcodebuild -project PhotoDesk.xcodeproj -scheme PhotoDesk -configuration Release \
   -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build > build/xcodebuild.log 2>&1 || {
