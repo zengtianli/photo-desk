@@ -52,7 +52,7 @@
 ## 构建和验证
 
 ```bash
-cd /Users/tianli/Apps/mac/photo-desk
+cd /Users/tianli/Apps/photo-desk
 uv sync --locked --group build
 uv run python -m unittest discover -s tests -v
 bash build.sh                 # 构建内置引擎、SwiftUI、签名、安装
