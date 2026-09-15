@@ -1,5 +1,7 @@
 # PhotoDesk
 
+**中文** | [English](README_EN.md)
+
 原生 macOS 照片时间线。打开即自动扫描整个图库，把生活、猫咪、人物、会议与资料联系起来，并准备重复照片清理建议。
 
 产品主页与安装教程：[PhotoDesk](https://app-mac-photodesk.tianli.cyou/)。主页发布状态以实际访问结果为准。
