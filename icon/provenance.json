@@ -1,0 +1,24 @@
+{
+  "provider": "volcengine-seedream",
+  "tool": "genai_image.py (Volcengine Seedream API)",
+  "prompt_file": "candidates/prints.txt",
+  "source": "SeedreamSource.png (unaltered original, candidate 'prints')",
+  "source_sha256": "844d5bd6fbaf5dd87823d376328a94f3c485b00e9fe40c0baee923d63fd5ea85",
+  "rejected": [
+    "candidates/stack.png (small mountain reads weaker at 32 px)"
+  ],
+  "replaces": "SF-symbol style placeholder (flat teal tile with photo glyph), backed up to ~/.Trash/icon-refresh-20260923/photo-desk/icon",
+  "packaging": {
+    "crop_box": [
+      191,
+      191,
+      829,
+      829
+    ],
+    "output_canvas_px": 1024,
+    "tile_px": 832,
+    "inset_px": 96,
+    "corner_radius_px": 188,
+    "method": "PIL crop inside the photographed tile bevel + resize + rounded alpha mask on transparent canvas; icns by make_icon.to_icns. No AI regeneration."
+  }
+}
