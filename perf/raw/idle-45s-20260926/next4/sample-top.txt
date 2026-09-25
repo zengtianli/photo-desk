@@ -1,0 +1,7 @@
+Sort by top of stack, same collapsed (when >= 5):
+        __workq_kernreturn  (in libsystem_kernel.dylib)        12733
+        mach_msg2_trap  (in libsystem_kernel.dylib)        7529
+        JSONScanner.DocumentReader.skipUTF8StringTillQuoteOrBackslashOrInvalidCharacter()  (in Foundation)        1039
+        _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib)        370
+        objc_release  (in libobjc.A.dylib)        354
+        swift_deallocClassInstance  (in libswiftCore.dylib)        310

@@ -206,7 +206,7 @@ def duplicates(photos, api, cfg, connection):
             records.append(r)
             if redundant:
                 recommended.append(r['id'])
-    plan = api.persist_plan('duplicates', str(cfg.library), records, len(photos),
+    plan = api.plan_record('duplicates', str(cfg.library), records, len(photos),
                             ['已自动比较原片指纹；仅字节一致且保留副本覆盖相册与标记的静态照片预选删除。Live Photo、视频和编辑版本留给你核对。'],
                             token=str(uuid.uuid5(uuid.NAMESPACE_URL, str(cfg.library) + '/journey-duplicates')))
     return plan
@@ -215,7 +215,10 @@ def duplicates(photos, api, cfg, connection):
 def run(request, cfg, api):
     db = api.load_db(cfg.library)
     cfg.raw['library'] = str(db.library_path)
-    photos = db.photos()
+    # osxphotos returns photos in a per-process order (string hash seed), and every later sort is
+    # stable, so photos taken in the same second used to swap places on each rebuild. A fixed
+    # order keeps the timeline steady and lets an unchanged library produce an identical result.
+    photos = sorted(db.photos(), key=lambda p: p.uuid)
     options = request.get('options', {})
     if not options.get('include_shared', True):
         photos = [p for p in photos if api.editable(p)]
@@ -285,7 +288,7 @@ def run(request, cfg, api):
         events.append(dict(id=eid, title=title, group=label, date=date, end_date=api.lib.photo_date(last),
                            count=len(bucket), tracks=tracks, people=sorted({n for _, info in bucket for n in info['people']}),
                            place=m['place'], evidence=evidence, cover=related[0]))
-    plan = api.persist_plan('journey', cfg.library, records, len(photos),
+    plan = api.plan_record('journey', cfg.library, records, len(photos),
                             [f'按拍摄时间、人物、已有相册及本机内容识别自动联系；同日、同主题且间隔不超过 {hours} 小时、位置不超过 {kilometers} 公里的照片聚合为片段。共享内容可浏览，不参与删除。'],
                             token=str(uuid.uuid5(uuid.NAMESPACE_URL, cfg.library + '/journey')))
     duplicate_plan = duplicates(photos, api, cfg, connection)
@@ -294,5 +297,21 @@ def run(request, cfg, api):
                   pending=len(photos)-complete, unavailable=unavailable, failed=failed,
                   events=events, plan=plan, duplicates=duplicate_plan,
                   albums=len(db.albums), tracks=sorted({t for e in events for t in e['tracks']}))
+    result['digest'] = content_digest(result)
+    files = [api.plan_path(plan['id']), api.plan_path(duplicate_plan['id']), folder / 'latest.json']
+    if result['digest'] == request.get('previous_digest') and all(f.is_file() for f in files):
+        # The app already shows exactly this; skip ~13 MB of rewrites and the 9 MB reply.
+        return dict(unchanged=True, digest=result['digest'])
+    api.write_plan_record(plan)
+    api.write_plan_record(duplicate_plan)
     api.atomic_json(folder / 'latest.json', result)
     return result
+
+
+def content_digest(result):
+    """Digest of everything the app shows, without the run's own timestamps."""
+    core = {k: v for k, v in result.items() if k not in ('generated', 'digest')}
+    core['plan'] = {k: v for k, v in result['plan'].items() if k != 'created'}
+    core['duplicates'] = {k: v for k, v in result['duplicates'].items() if k != 'created'}
+    text = json.dumps(core, ensure_ascii=False, sort_keys=True, separators=(',', ':'), default=str)
+    return hashlib.sha256(text.encode()).hexdigest()

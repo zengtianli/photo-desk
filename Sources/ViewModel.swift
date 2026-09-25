@@ -309,25 +309,74 @@ final class PhotoDeskModel: ObservableObject {
             organizing = true
             var command = "journey-snapshot"
             var shouldRetry = retryFailed
+            // What the shown timeline was built from and its content digest. Restarts (settings,
+            // ⌘R, library choice, retry, after deletion) begin with neither, so they always rebuild
+            // and redraw. All file and database reads run off the main thread.
+            var builtFrom: LibraryBaseline?
+            var shownDigest: String?
+            // Automatic rebuilds in a row that produced exactly what is on screen (e.g. Photos
+            // re-geocoding places to the same names). Each one stretches the next interval, up
+            // to 3x; any visible change or restart resets it.
+            var sameResults = 0
+            let followsSystem = chosenLibrary.isEmpty
+            let systemPreferences = followsSystem ? LibraryStamp.photosPreferences : nil
             while !Task.isCancelled {
                 do {
-                    let result = try await organizer.execute(JourneyResult.self, request: ["command": command, "library": chosenLibrary, "limit": preferences.batchSize, "options": preferences.engineOptions, "retry_failed": shouldRetry])
+                    if command == "journey-snapshot", let baseline = builtFrom {
+                        try await Task.sleep(for: .seconds(preferences.refreshSeconds * (1 + min(sameResults, 2))))
+                        // Unrelated system writes (analysis graph, search index, scores) only
+                        // advance the baseline; a burst of related writes becomes one rebuild.
+                        let settle = Duration.seconds(min(15, max(5, preferences.refreshSeconds / 6)))
+                        switch try await baseline.check(settle: settle, maxWait: .seconds(preferences.refreshSeconds * 2)) {
+                        case .unchanged(let advanced): builtFrom = advanced; continue
+                        case .rebuild: break
+                        }
+                    }
+                    // The library path is known unless this is the first run while following the
+                    // system library; then the baseline is taken after the run (see settled).
+                    var before: LibraryBaseline?
+                    if command == "journey-snapshot", let known = followsSystem ? journey?.library : chosenLibrary {
+                        before = await LibraryBaseline.probe(library: known, systemPreferences: systemPreferences)
+                    }
+                    let started = Date()
+                    let outcome = try await organizer.journey(request: ["command": command, "library": chosenLibrary, "limit": preferences.batchSize,
+                        "options": preferences.engineOptions, "retry_failed": shouldRetry, "previous_digest": shownDigest ?? ""])
                     shouldRetry = false
                     guard !Task.isCancelled, chosenLibrary == library else { return }
-                    journey = result
-                    if status == "准备连接你的照片图库" { status = "已自动归集 \(result.total.formatted()) 项照片与视频" }
-                    if activeEvent == nil && selectionJourney == nil { plans[.journey] = result.plan }
-                    if page != .duplicates || plans[.duplicates] == nil || (command == "journey-snapshot" && selected.isEmpty) {
-                        plans[.duplicates] = result.duplicates
-                        if page == .duplicates && preferences.preselectDuplicates { selected = Set(result.duplicates.rows.filter { $0.recommended == true }.map(\.id)) }
+                    let result: JourneyResult
+                    switch outcome {
+                    case .changed(let fresh):
+                        result = fresh; shownDigest = fresh.digest; sameResults = 0
+                        journey = fresh
+                        if status == "准备连接你的照片图库" { status = "已自动归集 \(fresh.total.formatted()) 项照片与视频" }
+                        if activeEvent == nil && selectionJourney == nil { plans[.journey] = fresh.plan }
+                        if page != .duplicates || plans[.duplicates] == nil || (command == "journey-snapshot" && selected.isEmpty) {
+                            plans[.duplicates] = fresh.duplicates
+                            if page == .duplicates && preferences.preselectDuplicates { selected = Set(fresh.duplicates.rows.filter { $0.recommended == true }.map(\.id)) }
+                        }
+                    case .unchanged:
+                        // Same content as on screen: nothing decoded, nothing redrawn.
+                        guard let shown = journey else { shownDigest = nil; continue }
+                        result = shown; sameResults += 1
                     }
                     let needsRecognition = result.pending > 0 && preferences.recognizeContent
                     organizationStatus = !preferences.recognizeContent ? "已按时间、人物和已有相册归集；内容识别已关闭" : result.pending > 0
                         ? "已联系 \(result.total.formatted()) 张照片 · 内容识别 \(result.analyzed.formatted()) / \(result.total.formatted())；可以边看边整理"
                         : "全部照片已归集 · 新照片每分钟自动检查；内容识别缺失 \(result.unavailable) 项，失败 \(result.failed) 项"
                     organizing = needsRecognition
+                    // Recorded only once recognition batches are done, and only for the library the run read.
+                    if needsRecognition {
+                        builtFrom = nil
+                    } else if let before, before.describes(result.library) {
+                        builtFrom = before
+                    } else {
+                        builtFrom = await LibraryBaseline.settled(library: result.library, systemPreferences: systemPreferences, before: started)
+                    }
                     command = needsRecognition ? "journey-enrich" : "journey-snapshot"
-                    try await Task.sleep(for: needsRecognition ? .milliseconds(300) : .seconds(preferences.refreshSeconds))
+                    // With a baseline the next pass sleeps inside the check; without one it rebuilds
+                    // after the usual interval, as before.
+                    if needsRecognition { try await Task.sleep(for: .milliseconds(300)) }
+                    else if builtFrom == nil { try await Task.sleep(for: .seconds(preferences.refreshSeconds)) }
                 } catch {
                     guard !Task.isCancelled else { return }
                     organizing = false; automaticEnabled = false; organizationError = error.localizedDescription

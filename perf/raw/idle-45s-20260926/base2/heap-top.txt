@@ -1,0 +1,75 @@
+Process:         PhotoDesk [38089]
+Path:            /Users/USER/*/PhotoDesk.app/Contents/MacOS/PhotoDesk
+Load Address:    0x100c20000
+Identifier:      cyou.tianli.PhotoDesk
+Version:         1.0.1 (10)
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  launchd [1]
+Target Type:     live task
+
+Date/Time:       2026-09-25 23:31:48.576 +0800
+Launch Time:     2026-09-25 23:28:58.495 +0800
+OS Version:      macOS 27.2 (26B5086k)
+Report Version:  7
+Analysis Tool:   /usr/bin/heap
+
+Physical footprint:         84.4M
+Physical footprint (peak):  117.7M
+Idle exit:                  untracked
+----
+
+Process 38089: 7 zones
+
+All zones: 313891 nodes malloced - Sizes: 2048KB[1] 1536KB[1] 1296KB[1] 928KB[1] 912KB[5] 752KB[4] 688KB[1] 272KB[1] 144KB[2] 80KB[1] 48KB[3] 32KB[2] 28KB[2] 24KB[7] 20KB[9] 16KB[225] 14KB[10] 12KB[14] 10KB[38] 8KB[98] 7KB[39] 6KB[59] 5KB[61] 4KB[116] 3.5KB[272] 3KB[121] 2.5KB[107] 2KB[234] 1.75KB[708] 1.5KB[91] 1.25KB[122] 1KB[559] 896[349] 768[480] 640[1144] 512[1084] 488[41] 480[3] 468[2] 464[6] 456[3] 452[13] 448[1232] 440[3] 436[4] 432[14] 431[4] 428[4] 420[9] 416[6] 408[3] 404[1] 400[1] 396[1] 392[3] 388[13] 384[1327] 380[2] 376[20] 372[8] 368[3] 364[1] 360[5] 356[13] 352[7] 351[1] 348[2] 344[1] 340[2] 336[18] 328[4] 324[1] 320[2811] 316[14] 312[4] 308[1] 304[20] 296[30] 292[1] 291[1] 288[5] 287[2] 284[2] 280[2] 276[4] 272[96] 268[1] 264[3] 263[12] 262[1] 260[4] 256[1627] 252[4] 251[1] 248[10] 240[12] 239[2] 236[4] 235[1] 232[40] 228[33] 224[4288] 220[1] 219[1] 216[10] 215[15] 212[11] 208[29] 204[13] 203[1] 200[24] 199[1] 196[48] 192[10199] 190[1] 188[23] 187[1] 184[35] 183[1] 180[5] 178[4] 176[86] 172[93] 171[5] 168[193] 167[4] 164[5] 160[20542] 159[27] 156[46] 154[12] 152[83] 151[3] 150[1] 148[168] 144[65] 140[18] 138[1] 136[112] 135[24] 133[2] 132[36] 130[3] 128[7079] 127[6] 126[1] 125[2] 124[21] 123[3] 122[34] 121[38] 120[84] 119[6] 116[74] 115[8] 114[1] 113[11] 112[8762] 111[6] 110[64] 109[3] 108[119] 107[164] 106[32] 105[2] 104[509] 103[10] 100[67] 99[2] 98[2] 97[3] 96[17366] 95[6] 94[12] 92[174] 91[7] 89[2] 88[514] 87[27] 86[4] 85[3] 84[910] 82[4] 81[33] 80[41384] 79[46] 78[26] 77[4] 76[480] 75[12] 74[40] 73[8] 72[1288] 71[73] 70[6] 69[8] 68[1251] 67[5] 66[30] 65[62] 64[56557] 63[9] 62[4] 61[11] 60[412] 59[3] 58[40] 57[37] 56[901] 55[138] 54[2] 53[11] 52[687] 51[144] 50[56] 49[59] 48[29897] 47[24] 46[10] 45[5] 44[125] 43[10] 42[19] 41[58] 40[1660] 39[117] 38[28] 37[54] 36[940] 35[38] 34[8] 33[48] 32[52997] 31[361] 30[39] 29[81] 28[5164] 27[49] 26[12] 25[114] 24[3088] 23[74] 22[25] 21[23] 20[546] 19[84] 18[112] 17[234] 16[16411] 15[57] 14[32] 13[362] 12[2042] 11[22] 10[80] 9[82] 8[5716] 7[12] 5[67] 4[2535] 2[85] 1[634] 
+
+Found:  1363 ObjC classes  1808 Swift classes  155 C++ classes  221 CFTypes
+Type names for non-objects could be derived from allocation backtraces if the process used MallocStackLogging
+
+-----------------------------------------------------------------------
+All zones: 313891 nodes (52474957 bytes)
+
+   COUNT      BYTES       AVG   CLASS_NAME                                        TYPE    BINARY
+   =====      =====       ===   ==========                                        ====    ======
+   79126   19826510     250.6   non-object                                                
+   92390    8916352      96.5   Swift.StringStorage                               Swift   libswiftCore.dylib
+     205    3141120   15322.5   Swift Metadata                                    C       libswiftCore.dylib
+       2    2101248  1050624.0   Swift._ContiguousArrayStorage<PhotoDesk.PlanRow>  Swift   libswiftCore.dylib
+       2    1597440  798720.0   Swift._ContiguousArrayStorage<PhotoDesk.JourneyEvent>  Swift   libswiftCore.dylib
+    8161    1275264     156.3   PropertyList.Element                              Swift   SwiftUICore
+    1701    1273792     748.8   Swift._DictionaryStorage<Swift.ObjectIdentifier, SwiftUI.(AnyTrackedValue in $2461a2214)>  Swift   libswiftCore.dylib
+     931     825792     887.0   Class.methodCache._buckets (bucket_t)             C       libobjc.A.dylib
+     300     489472    1631.6   Swift._ContiguousArrayStorage<SwiftUI.PlatformItemList.Item>  Swift   libswiftCore.dylib
+      49     463040    9449.8   CFData (Bytes Storage)                            C       CoreFoundation
+    3978     445536     112.0   SVGAttribute                                      C++     CoreSVG
+    1624     421216     259.4   NSMutableDictionary (Storage)                     C       CoreFoundation
+    7701     410784      53.3   CFString                                          ObjC    CoreFoundation
+    4507     409056      90.8   Closure context                                   Swift   <unknown>
+    5195     386368      74.4   Swift._ContiguousArrayStorage<Swift.String>       Swift   libswiftCore.dylib
+     125     379328    3034.6   __DataStorage._bytes (malloc)                             Foundation
+    4094     262016      64.0   SVGPathCommand                                    C++     CoreSVG
+     498     200448     402.5   CFDictionary (Value Storage)                      C       CoreFoundation
+    2241     198000      88.4   Closure context (unknown layout)                  Swift   <unknown>
+     839     195264     232.7   PropertyList.Element Storage                      Swift   SwiftUICore
+       4     193536   48384.0   Swift._DictionaryStorage<Swift.String, Swift.String>  Swift   libswiftCore.dylib
+    1168     187536     160.6   Swift._ContiguousArrayStorage<SwiftUI.DisplayList.Item>  Swift   libswiftCore.dylib
+    1380     163104     118.2   NSDictionary                                      ObjC    CoreFoundation
+    4094     131008      32.0   SVGPathCommand                                    CFType  <unknown>
+    3978     127296      32.0   SVGAttribute                                      CFType  <unknown>
+     196     125440     640.0   NSCTFont                                          ObjC    UIFoundation
+    1242     119232      96.0   PropertyList.Tracker                              Swift   SwiftUICore
+      20     116224    5811.2   Swift._DictionaryStorage<SwiftUI.DisplayList.ViewUpdater.ViewCache.Key, SwiftUI.DisplayList.ViewUpdater.ViewInfo>  Swift   libswiftCore.dylib
+       5     101888   20377.6   icu::UnicodeSet (list Storage)                    C       libicucore.A.dylib
+     314     101872     324.4   CFDictionary (Key Storage)                        C       CoreFoundation
+     157     100480     640.0   ResolvedStyledText.StringDrawing                  Swift   SwiftUICore
+     184      98576     535.7   CFDictionary (Weak Key Storage)                   C       CoreFoundation
+     384      98304     256.0   SwiftUI.(PropertiesTransform in $1db0d4d6c)       Swift   SwiftUI
+    1585      95312      60.1   Swift HeapGenericLocalVariable                    C       libswiftCore.dylib
+     583      93184     159.8   CGPath                                            CFType  CoreGraphics
+     208      93184     448.0   CTRun                                             CFType  CoreText
+     196      87808     448.0   _NSViewLayoutAux                                  ObjC    AppKit
+    1077      86160      80.0   SVGAttributeMap                                   C++     CoreSVG
+    2647      84704      32.0   NSKeyValueDependency                              ObjC    AppKit
+     213      81792     384.0   SVGShapeNode                                      C++     CoreSVG
+    1631      78288      48.0   CFSet                                             ObjC    CoreFoundation
+    1617      75440      46.7   CFSet (Value Storage)                             C       CoreFoundation

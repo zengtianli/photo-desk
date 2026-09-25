@@ -1,0 +1,15 @@
+{
+ "engine_runs": [
+  {
+   "pid": "41941",
+   "first_seen_s": 2.7,
+   "last_seen_s": 10.3,
+   "cpu_s": 5.8,
+   "peak_rss_mb": 255.0
+  }
+ ],
+ "engine_cpu_s_total": 5.8,
+ "engine_cpu_s_in_window": 0,
+ "window_s": 60.4,
+ "engine_cpu_pct_in_window": 0.0
+}

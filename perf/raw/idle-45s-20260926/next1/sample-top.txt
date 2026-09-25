@@ -1,0 +1,7 @@
+Sort by top of stack, same collapsed (when >= 5):
+        mach_msg2_trap  (in libsystem_kernel.dylib)        7878
+        __workq_kernreturn  (in libsystem_kernel.dylib)        4166
+        _xzm_malloc_tc  (in libsystem_malloc.dylib)        9
+        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        9
+
+Binary Images:

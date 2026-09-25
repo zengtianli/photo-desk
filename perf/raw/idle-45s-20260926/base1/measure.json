@@ -1,0 +1,8 @@
+{
+  "idle": {
+    "process": "~/Apps/photo-desk/build/perf-run/PhotoDesk-1.0.1-10-arm64/PhotoDesk.app/Contents/MacOS/PhotoDesk",
+    "footprint_mb": 116.0,
+    "cpu_pct": 1.3,
+    "window_s": 60
+  }
+}

@@ -1,0 +1,400 @@
+{
+  "product": "photo-desk",
+  "version": "1.0.1 (10)",
+  "measured_at": "2026-09-26",
+  "device": "Mac16,12 / Apple M4 / macOS 27.2",
+  "size": {
+    "download_bytes": 37556610,
+    "installed_bytes": 97005568,
+    "download_mb": 35.82,
+    "installed_mb": 92.51,
+    "note": "download = build/site/downloads/PhotoDesk-1.0.1-10-arm64.zip（与 dist/ 同哈希）；installed = 解压后 PhotoDesk.app 的 du 占用。*_mb 为旧字段（MiB），页面按 *_bytes 十进制显示。"
+  },
+  "compare": [],
+  "idle": {
+    "process": "PhotoDesk 主进程 + photo-engine 子进程",
+    "footprint_mb": 85.0,
+    "main_footprint_mb": 85.0,
+    "cpu_pct": 1.33,
+    "cpu_pct_with_checks": 6.47,
+    "engine_cpu_pct": 5.588,
+    "engine_runs_per_10_min": 8,
+    "engine_interval_s": 71,
+    "engine_peak_footprint_mb": 274,
+    "window_s": 60,
+    "long_window_s": 603,
+    "settle_s": 45,
+    "measured_at": "2026-09-26",
+    "runs": [
+      {
+        "tag": "fin-rel-a",
+        "main_footprint_mb": 85.0,
+        "main_cpu_pct": 1.33,
+        "total_cpu_pct_60s": 8.76,
+        "engines_in_window": 1
+      },
+      {
+        "tag": "fin-rel-b",
+        "main_footprint_mb": 84.0,
+        "main_cpu_pct": 1.33,
+        "total_cpu_pct_60s": 9.14,
+        "engines_in_window": 1
+      }
+    ],
+    "method": "隔离实例：open -n -g -j，PHOTODESK_DATA_ROOT 指向用户识别缓存的 SQLite 备份副本、独立偏好域（默认每 60 秒检查、内容识别开启），真实系统图库只读；单次：静置 45 秒后 measure.py idle 60 秒（主进程与 --with-helpers 并行）；并行：发布版与新版错开 20 秒启动、静置 45 秒后同时观察 10 分钟，1 Hz 记录每个 photo-engine 子进程的 CPU 时间与峰值内存",
+    "memory_note": "主进程常驻约 85 MB；每约 70 秒整理引擎全量重建一次，那几秒另占约 190–270 MB。",
+    "cpu_note": "含每约 70 秒一次的引擎全量重建（每次约 4–5 秒 CPU，与图库是否变化无关）；10 分钟平均。",
+    "load": "{ 16.75 19.01 22.55 }"
+  },
+  "speed_gui": [
+    {
+      "key": "cold_launch_to_window",
+      "label": "冷启动到窗口出现",
+      "median_ms": 1464,
+      "runs": 3,
+      "headline": true,
+      "raw_ms": [
+        1893,
+        1355,
+        1464
+      ],
+      "method": "open -g -j 后台隐藏启动，被动读取窗口列表直到主窗口出现；不点击、不激活",
+      "label_en": "Cold launch to window shown"
+    }
+  ],
+  "data": "真实照片图库 6,373 项（2,714 个时间线片段）",
+  "background": [
+    {
+      "key": "journey_rebuild",
+      "job": "自动整理引擎全量重建（发布版：每约 71–77 秒一次，不看图库是否变化）",
+      "per_run_cpu_s": {
+        "load_13": 4.2,
+        "load_118_258": 7.2
+      },
+      "per_run_s": {
+        "load_13": 5.5,
+        "load_118_258": 11.0
+      },
+      "interval_s": {
+        "load_13": 71,
+        "load_118_258": 76
+      },
+      "cpu_min_per_day": {
+        "load_13": 85.2,
+        "load_118_258": 136.4
+      },
+      "note": "只在 App 打开时发生；cpu_min_per_day = 单次引擎 CPU × 86400 ÷ 周期 ÷ 60。per_run_s 为子进程墙钟。"
+    }
+  ],
+  "history": [
+    {
+      "measured_at": "2026-09-25",
+      "idle": {
+        "process": "~/Apps/photo-desk/build/perf-run/PhotoDesk-1.0.1-10-arm64/PhotoDesk.app/Contents/MacOS/PhotoDesk",
+        "footprint_mb": 114.0,
+        "cpu_pct": 1.28,
+        "window_s": 60,
+        "method": "open -g -j 后台启动，静置 15 秒后 footprint 采样 60 秒（phys_footprint，活动监视器「内存」列同口径）；CPU = 进程 CPU 时间增量 ÷ 墙钟"
+      },
+      "env_note": "测量时本机负载均值较高（其他编译与系统索引任务、交换区约 12 GB），启动时间偏保守；内存与 CPU 为进程自身数值",
+      "superseded_by": "2026-09-26 45 秒静置口径；旧口径静置 15 秒，且未计入 photo-engine 子进程"
+    },
+    {
+      "section": "idle",
+      "replaced_on": "2026-09-26",
+      "reason": "同一发布版按修正后的方法重测（CPU 窗口内不查 footprint；含引擎子进程；10 分钟并行窗口）",
+      "value": {
+        "process": "~/Apps/photo-desk/build/perf-run/PhotoDesk-1.0.1-10-arm64/PhotoDesk.app/Contents/MacOS/PhotoDesk",
+        "footprint_mb": 113.0,
+        "cpu_pct": 1.3,
+        "engine_cpu_pct": 11.59,
+        "cpu_pct_with_checks": 12.12,
+        "window_s": 60,
+        "settle_s": 45,
+        "method": "open -n -g -j 后台启动（不激活、不抢焦点），静置 45 秒后 measure.py idle 采样 60 秒：footprint 取 phys_footprint 峰值（活动监视器「内存」列同口径），cpu_pct = 主进程 CPU 时间增量 ÷ 墙钟；engine_cpu_pct = 同一窗口内该进程派生的 photo-engine 子进程 CPU（每 0.5 秒 ps 采样）；cpu_pct_with_checks = 两者之和。每个版本多次测量取中位。",
+        "runs": [
+          {
+            "run": "base1",
+            "at": "2026-09-25 23:25",
+            "footprint_mb": 116.0,
+            "cpu_pct": 1.3,
+            "engine_cpu_pct": 11.59,
+            "engine_runs_in_window": 1,
+            "load_avg_1m": "169–175",
+            "cpu_pct_with_checks": 12.89
+          },
+          {
+            "run": "base2",
+            "at": "2026-09-25 23:29",
+            "footprint_mb": 101.0,
+            "cpu_pct": 0.18,
+            "engine_cpu_pct": 11.94,
+            "engine_runs_in_window": 1,
+            "load_avg_1m": "118–258",
+            "cpu_pct_with_checks": 12.12
+          },
+          {
+            "run": "base3",
+            "at": "2026-09-26 00:39",
+            "footprint_mb": 113.0,
+            "cpu_pct": 1.33,
+            "engine_cpu_pct": 6.42,
+            "engine_runs_in_window": 1,
+            "load_avg_1m": "13.7–13.9",
+            "cpu_pct_with_checks": 7.75
+          }
+        ],
+        "note": "发布版的自动整理每约 71–77 秒无条件启动一次 photo-engine 全量重建（读取全部图库、重建 2,714 个片段、重写约 13 MB 索引文件、主进程再解码约 9.3 MB 结果），与图库是否变化无关；三次测量窗口内各有 1 次。引擎单次 3.9–7.5 秒 CPU、峰值 RSS 200–286 MB（负载越高 CPU 时间越长）。",
+        "load_note": "base1/base2 负载均值 118–258、交换区约 16 GB 几乎用满；base3 负载约 14。测量时用户自己的 /Applications/PhotoDesk（build 18）同时在运行，两者共用同一数据目录。进程自身内存与 CPU 可比，高负载下引擎单次 CPU 时间偏长。"
+      }
+    }
+  ],
+  "next": {
+    "source": "HEAD 19f7b73 + 第一轮与第二轮改动（2026-09-26 02:44 用当前源码重建引擎与 App）",
+    "build": "build/perf-next/PhotoDesk.app（CFBundleVersion 18，ad-hoc 签名；photo-engine 与发布版同一 SHA-256 6ab9f9bd…）",
+    "measured_at": "2026-09-26",
+    "device": "Mac16,12 / Apple M4 / macOS 27.2",
+    "load_note": "测量时本机负载均值 13–400、交换区 16–17 GB 几乎用满，另有用户自己的 /Applications/PhotoDesk（build 18）和其他 App 编译在跑；进程自身内存与 CPU 可比，墙钟偏慢。系统照片服务（photolibraryd/photoanalysisd/cloudphotod 于 23:34 重启）在 00:00–00:43 间约每 1–5 分钟写一次图库，23:40–00:00、00:13–00:26、00:34–00:40 为静止期。",
+    "size": {
+      "download_bytes": 38013017,
+      "installed_bytes": 97943552,
+      "note": "2026-09-26 第二轮构建（含图标无损重压）；下载大小为 ditto -c -k --keepParent 打包的 zip，与发布脚本同方法",
+      "installed_mb": 93.41,
+      "download_mb": 36.25
+    },
+    "idle": {
+      "footprint_mb": 83.0,
+      "main_footprint_mb": 83.0,
+      "cpu_pct": 0.055,
+      "cpu_pct_with_checks": 0.055,
+      "engine_runs_per_10_min": 0,
+      "window_s": 60,
+      "long_window_s": 603,
+      "settle_s": 45,
+      "runs": [
+        {
+          "tag": "fin-next-a",
+          "main_footprint_mb": 82.0,
+          "main_cpu_pct": 0.02,
+          "total_cpu_pct_60s": 0.02,
+          "engines_in_window": 0
+        },
+        {
+          "tag": "fin-next-b",
+          "main_footprint_mb": 83.0,
+          "main_cpu_pct": 0.0,
+          "total_cpu_pct_60s": 0.0,
+          "engines_in_window": 0
+        }
+      ],
+      "concurrent_10_min": {
+        "library_writes_in_window": "系统写入 2 次（与引擎所读数据无关，指纹未变）",
+        "release": {
+          "main_cpu_pct": 0.881,
+          "engine_runs": 8,
+          "engine_cpu_pct": 5.588,
+          "engine_peak_footprint_mb": [
+            258,
+            240,
+            202,
+            195,
+            194,
+            273,
+            193,
+            274
+          ]
+        },
+        "next": {
+          "main_cpu_pct": 0.055,
+          "engine_runs": 0,
+          "engine_cpu_pct": 0.0
+        }
+      },
+      "method": "隔离实例：open -n -g -j，PHOTODESK_DATA_ROOT 指向用户识别缓存的 SQLite 备份副本、独立偏好域（默认每 60 秒检查、内容识别开启），真实系统图库只读；单次：静置 45 秒后 measure.py idle 60 秒（主进程与 --with-helpers 并行）；并行：发布版与新版错开 20 秒启动、静置 45 秒后同时观察 10 分钟，1 Hz 记录每个 photo-engine 子进程的 CPU 时间与峰值内存"
+    },
+    "same_library_activity": {
+      "concurrent_5min": {
+        "run": "concurrent-0026",
+        "window_s": 300,
+        "library_writes": "00:28:21、00:30:21 等",
+        "release_1.0.1_10": {
+          "engine_runs": 4,
+          "engine_cpu_s": 18.9,
+          "engine_cpu_pct": 6.29,
+          "main_cpu_pct": 0.77,
+          "footprint_mb_median": 85.0,
+          "footprint_mb_peak": 104.0
+        },
+        "next": {
+          "engine_runs": 2,
+          "engine_cpu_s": 10.9,
+          "engine_cpu_pct": 3.63,
+          "main_cpu_pct": 0.61,
+          "footprint_mb_median": 85.0,
+          "footprint_mb_peak": 110.0
+        }
+      },
+      "replay_62min": {
+        "window": "2026-09-25 23:41–2026-09-26 00:43",
+        "library_writes": 27,
+        "release_rebuilds_est": 55,
+        "next_rebuilds_est": "14–15",
+        "note": "按 photos-db-watch.txt 记录的真实写入时刻，以 60 秒检查 + 8 秒重建周期回放；这一小时照片服务刚重启、写库偏频繁，静止期内新版 0 次。"
+      }
+    },
+    "changes": [
+      "第一轮：LibraryStamp 门控——图库文件（Photos.sqlite / -wal / Photos 偏好）未变时跳过每 60 秒一次的引擎全量重建",
+      "第二轮：LibraryFingerprint——只读查询引擎实际读取的 16 张表相关列（真实库约 88 ms），系统分析、搜索索引等无关写入只推进基线、不重建；相关写入平静后合并为一次重建",
+      "引擎返回结果摘要；与界面正在显示的相同就回复 unchanged，不重写约 13 MB 文件，App 不解码、不重绘；连续相同时检查间隔最多延长到 3 倍",
+      "修正引擎输出不确定：osxphotos 的照片顺序随进程哈希种子变化，先按 uuid 排序，同一图库两次重建结果一致",
+      "戳记与指纹在后台线程读取，不阻塞界面",
+      "图标 icns 无损重压 1,351,014 → 1,007,856 B（逐尺寸像素一致）；构建脚本改为可重复步骤",
+      "scripts/build_engine.sh 改用 python -m PyInstaller（旧 .venv 脚本 shebang 指向已失效路径）"
+    ],
+    "before_same_method": {
+      "version": "1.0.1 (10)",
+      "footprint_mb": 113.0,
+      "cpu_pct": 1.3,
+      "engine_cpu_pct": 11.59,
+      "cpu_pct_with_checks": 12.12,
+      "runs": [
+        "base1",
+        "base2",
+        "base3"
+      ],
+      "note": "发布版不论图库是否变化都每约 71–77 秒重建，三次窗口内各有 1 次。"
+    },
+    "not_changed": [
+      "内存稳态没有明显下降：图库静止时新版 footprint 稳定在 82–84 MB，发布版两次重建之间也在 84–93 MB；下降的是窗口峰值（发布版 101–116 MB → 新版 90–91 MB），来自不再每分钟解码 9.3 MB 结果。稳态主要是时间线数据本身（约 9.2 万个字符串 8.9 MB、行与片段数组 3.7 MB）、默认 malloc 区碎片约 8.6 MB、窗口 CoreAnimation 12 MB 和首屏 12 张封面缩略图 10.5 MB。",
+      "试过重建后调用 malloc_zone_pressure_relief：默认区脏页 45.1 MB 对 45.7 MB，无可测收益，已撤回（原始记录 next3-ab-relief-withdrawn）。",
+      "缩略图：时间线封面按 640 px、照片格按 480 px、放大预览按 1800 px 用 CGImageSourceCreateThumbnailAtIndex 解码，没有全尺寸解码；没有共享缓存，图片存在各卡片的 @State 里，随懒加载网格的视图寿命保留，没有总量上限。浏览越多片段内存可能越高，需要真实滚动验证后再改，本轮只做被动测量，未改。"
+    ],
+    "history": [
+      {
+        "replaced_on": "2026-09-26",
+        "reason": "第二轮：内容指纹与结果摘要；按修正后的方法重测（第一轮 library_changing 中位数取错，应为 101 MB / 11.115%）",
+        "idle": {
+          "process": "~/Apps/photo-desk/build/perf-next/PhotoDesk.app/Contents/MacOS/PhotoDesk",
+          "footprint_mb": 90.5,
+          "cpu_pct": 0.0,
+          "engine_cpu_pct": 0.0,
+          "cpu_pct_with_checks": 0.0,
+          "window_s": 60,
+          "settle_s": 45,
+          "method": "open -n -g -j 后台启动（不激活、不抢焦点），静置 45 秒后 measure.py idle 采样 60 秒：footprint 取 phys_footprint 峰值（活动监视器「内存」列同口径），cpu_pct = 主进程 CPU 时间增量 ÷ 墙钟；engine_cpu_pct = 同一窗口内该进程派生的 photo-engine 子进程 CPU（每 0.5 秒 ps 采样）；cpu_pct_with_checks = 两者之和。每个版本多次测量取中位。 头条数字取图库在整个测量期间未被写入的两次（next6、next7）均值。",
+          "runs": [
+            {
+              "run": "next6",
+              "at": "2026-09-26 00:35",
+              "footprint_mb": 91.0,
+              "cpu_pct": 0.0,
+              "engine_cpu_pct": 0.0,
+              "engine_runs_in_window": 0,
+              "library_writes_in_run": 0,
+              "load_avg_1m": "29–31",
+              "cpu_pct_with_checks": 0.0
+            },
+            {
+              "run": "next7",
+              "at": "2026-09-26 00:37",
+              "footprint_mb": 90.0,
+              "cpu_pct": 0.0,
+              "engine_cpu_pct": 0.0,
+              "engine_runs_in_window": 0,
+              "library_writes_in_run": 0,
+              "load_avg_1m": "15–29",
+              "cpu_pct_with_checks": 0.0
+            }
+          ],
+          "long_window_quiet": {
+            "run": "concurrent-0015（新版部分）",
+            "window_s": 600,
+            "cpu_pct": 0.01,
+            "engine_runs": 0,
+            "engine_cpu_pct": 0.0,
+            "footprint_mb_median": 83.0,
+            "footprint_mb_peak": 90.0,
+            "library_writes": 0
+          },
+          "library_changing": {
+            "note": "系统照片服务正在写图库时，新版在下一个检查周期（60 秒）内照常重建一次，单次开销与发布版相同；以下 6 次测量窗口内各有 1 次由真实写入触发的重建。",
+            "runs": [
+              {
+                "run": "next1",
+                "at": "2026-09-25 23:59",
+                "footprint_mb": 112.0,
+                "cpu_pct": 1.35,
+                "engine_cpu_pct": 9.82,
+                "engine_runs_in_window": 1,
+                "trigger": "Photos WAL 写入 00:00:24、00:00:35",
+                "load_avg_1m": "216–291",
+                "cpu_pct_with_checks": 11.17
+              },
+              {
+                "run": "next2",
+                "at": "2026-09-26 00:02",
+                "footprint_mb": 94.0,
+                "cpu_pct": 1.4,
+                "engine_cpu_pct": 10.85,
+                "engine_runs_in_window": 1,
+                "trigger": "Photos WAL 写入 00:02:46",
+                "load_avg_1m": "122–221",
+                "cpu_pct_with_checks": 12.25
+              },
+              {
+                "run": "nextA3",
+                "at": "2026-09-26 00:06",
+                "footprint_mb": 108.0,
+                "cpu_pct": 1.35,
+                "engine_cpu_pct": 10.35,
+                "engine_runs_in_window": 1,
+                "trigger": "Photos WAL 写入 00:07:27",
+                "load_avg_1m": "84–95",
+                "cpu_pct_with_checks": 11.7
+              },
+              {
+                "run": "next4",
+                "at": "2026-09-26 00:12",
+                "footprint_mb": 94.0,
+                "cpu_pct": 0.08,
+                "engine_cpu_pct": 10.18,
+                "engine_runs_in_window": 1,
+                "trigger": "Photos WAL 写入 00:13:04",
+                "load_avg_1m": "229–273",
+                "cpu_pct_with_checks": 10.26
+              },
+              {
+                "run": "next5",
+                "at": "2026-09-26 00:33",
+                "footprint_mb": 92.0,
+                "cpu_pct": 0.85,
+                "engine_cpu_pct": 5.93,
+                "engine_runs_in_window": 1,
+                "trigger": "Photos WAL 写入 00:34:10",
+                "load_avg_1m": "29–80",
+                "cpu_pct_with_checks": 6.78
+              },
+              {
+                "run": "next8",
+                "at": "2026-09-26 00:41",
+                "footprint_mb": 113.0,
+                "cpu_pct": 1.08,
+                "engine_cpu_pct": 9.98,
+                "engine_runs_in_window": 1,
+                "trigger": "Photos.sqlite 检查点与 WAL 写入 00:42:18–00:42:38",
+                "load_avg_1m": "13–23",
+                "cpu_pct_with_checks": 11.06
+              }
+            ],
+            "footprint_mb_median": 108.0,
+            "cpu_pct_with_checks_median": 11.17
+          }
+        }
+      }
+    ],
+    "tests": "2026-09-26 02:44：Python 32 项、LibraryStamp 检查、LibraryFingerprint 检查（11 类无关写入不触发、16 类相关写入触发）、contract_check（真实冻结结果与 unchanged 回复）全部通过"
+  },
+  "why": "SwiftUI 原生窗口，不开 HTTP 服务；照片解析交给包内 PyInstaller 打包的 Python 引擎（安装体积主要来自它），以子进程运行、做完即退出。打开期间自动整理一直在跑：内容识别没做完时每批 12 张、隔 0.3 秒接着跑；识别完后每轮结束隔 60 秒再全量重跑一次引擎，不看图库有没有变化，空闲 CPU 主要花在这里。",
+  "why_en": "Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size. The engine runs as a subprocess that exits when done. Auto-organizing keeps running while the app is open: until content recognition is finished, it processes batches of 12 photos back to back with a 0.3-second gap. After that, the engine does a full rebuild 60 seconds after each pass, whether or not the library changed, and that is where most idle CPU goes.",
+  "data_en": "Real photo library with 6,373 items (2,714 timeline segments)"
+}

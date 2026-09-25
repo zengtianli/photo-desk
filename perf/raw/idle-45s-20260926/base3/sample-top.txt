@@ -1,0 +1,7 @@
+Sort by top of stack, same collapsed (when >= 5):
+        mach_msg2_trap  (in libsystem_kernel.dylib)        7858
+        __workq_kernreturn  (in libsystem_kernel.dylib)        3929
+
+Binary Images:
+       0x10436c000 -        0x1044303cf +cyou.tianli.PhotoDesk (1.0.1 - 10) <9584B5BD-A926-3C97-848C-3F2A27FA1C20> /Users/*/PhotoDesk.app/Contents/MacOS/PhotoDesk
+       0x10d72c000 -        0x10d73403f  libobjc-trampolines.dylib (973.1) <5F0C1F48-800D-3EA6-A0C0-63DAD1D0E483> /usr/lib/libobjc-trampolines.dylib

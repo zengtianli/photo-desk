@@ -1,0 +1,64 @@
+REGION TYPE                           SIZE     SIZE     SIZE     SIZE     SIZE     SIZE     SIZE    COUNT (non-coalesced) 
+===========                        ======= ========    =====  ======= ========   ======    =====  ======= 
+Accelerate Framework                  128K     128K       0K     128K       0K     128K       0K        1 
+Activity Tracing                      256K      48K       0K      48K       0K      48K       0K        1 
+AttributeGraph Data (old mapping)    1024K       0K       0K    1024K       0K       0K       0K        1 
+CG Raster Data                       10.2M       0K       0K    10.2M       0K       0K       0K       36 
+ColorSync                              16K       0K       0K      16K       0K       0K       0K        1 
+CoreAnimation                        12.0M     320K       0K    12.0M       0K     320K       0K      120 
+CoreGraphics                           48K      32K      32K      16K       0K       0K       0K        3 
+CoreServices                          624K       0K       0K     624K       0K       0K       0K        2 
+CoreUI Image Data                     256K       0K       0K     256K       0K       0K       0K        4 
+Deferred Reclaim                     64.0M      16K      16K       0K       0K       0K       0K        1 
+Foundation                             16K       0K       0K      16K       0K       0K       0K        1 
+Guard                               385.0G       0K       0K       0K       0K       0K       0K        1 
+IOAccelerator                          64K      64K      64K       0K       0K       0K       0K        2 
+IOAccelerator (graphics)               80K      16K       0K      16K       0K      16K       0K        2 
+IOKit                                 112K      48K      48K       0K       0K      16K       0K        7 
+Malloc                               3072K       0K       0K    1280K       0K       0K       0K        1         see MALLOC ZONE table below
+Malloc Guard Page                    3552K       0K       0K       0K       0K       0K       0K        4         see MALLOC ZONE table below
+Malloc Metadata                       752K       0K       0K     752K       0K       0K       0K        7         see MALLOC ZONE table below
+Malloc Metadata metadata             1200K       0K       0K     656K       0K       0K       0K        2         see MALLOC ZONE table below
+Malloc Nano metadata                   32K       0K       0K      32K       0K       0K       0K        1         see MALLOC ZONE table below
+Malloc Small                         82.2M       0K       0K    47.8M       0K       0K    10.2M      204         see MALLOC ZONE table below
+Malloc Small (empty)                 21.8M       0K       0K    2224K       0K       0K       0K       27         see MALLOC ZONE table below
+Malloc Tiny                          4096K       0K       0K     272K       0K       0K       0K        1         see MALLOC ZONE table below
+OS Alloc Once                          32K       0K       0K      16K       0K       0K       0K        1 
+Stack                                9264K      16K      16K     304K       0K       0K       0K        3 
+Stack (reserved)                      544K       0K       0K       0K       0K       0K       0K        1         reserved VM address space (unallocated)
+Stack Guard                          56.1M       0K       0K       0K       0K       0K       0K        4 
+Untagged                               48K       0K       0K      48K       0K       0K       0K        3 
+__AUTH                               6680K    2431K     128K     747K       0K       0K       0K      707 
+__AUTH_CONST                        100.1M    31.3M       0K       0K       0K       0K       0K     1056 
+__CTF                                  824      824       0K       0K       0K       0K       0K        1 
+__DATA                               40.7M    6754K       0K    2946K       0K       0K       0K     1064 
+__DATA_CONST                         37.0M    13.5M       0K      16K       0K       0K       0K     1062 
+__DATA_DIRTY                         14.7M    2048K     304K    2151K       0K       0K       0K      945 
+__FONT_DATA                           2352     2352       0K       0K       0K       0K       0K        1 
+__LINKEDIT                            1.6G    14.5M       0K       0K       0K       0K       0K        3 
+__OBJC_RO                           118.2M    38.7M       0K       0K       0K       0K       0K        1 
+__OBJC_RW                            2734K    2192K       0K      46K       0K       0K       0K        1 
+__TEXT                                1.4G   221.9M       0K       0K       0K       0K       0K     1150 
+__TPRO_CONST                          132K      20K      16K      96K       0K       0K       0K        4 
+mapped file                         291.3M    3376K       0K       0K       0K       0K       0K       37 
+owned unmapped                        192K       0K       0K     192K       0K       0K       0K       12 
+page table in kernel                  721K     721K     721K       0K       0K       0K       0K        1 
+shared memory                        1968K     224K     224K    1120K       0K       0K       0K       18 
+unused but dirty shlib __DATA         590K      16K      16K     573K       0K       0K       0K      384 
+===========                        ======= ========    =====  ======= ========   ======    =====  ======= 
+TOTAL                               388.8G   338.0M    1585K    85.3M       0K     528K    10.2M     6889 
+TOTAL, minus reserved VM space      388.8G   338.0M    1585K    85.3M       0K     528K    10.2M     6889 
+
+                                          VIRTUAL   RESIDENT      DIRTY    SWAPPED ALLOCATION      BYTES DIRTY+SWAP          REGION
+MALLOC ZONE                                  SIZE       SIZE       SIZE       SIZE      COUNT  ALLOCATED  FRAG SIZE  % FRAG   COUNT
+===========                               =======  =========  =========  =========  =========  =========  =========  ======  ======
+DefaultMallocZone_0x10562c000               96.2M         0K         0K      48.5M     253229      37.3M      11.2M     24%     128
+DefaultPurgeableMallocZone_0x11d894000      10.2M         0K         0K         0K         12      10.2M         0K      0%      12
+AttributeGraph_0x7ab6d080e0                 4096K         0K         0K      2304K      50368      2019K       285K     13%       2
+QuartzCore_0x105708000                      1408K         0K         0K      1296K       5095       363K       933K     73%      38
+AttributeGraph graph data_0x10e17c000       1120K         0K         0K       896K       1971       595K       301K     34%      47
+LSBindingEvaluator_0x10e158000               144K         0K         0K       144K          0         0K       144K    100%       2
+objc-class_rw_t_0x1056dc000                  128K         0K         0K       128K       4390       103K        25K     20%       8
+===========                               =======  =========  =========  =========  =========  =========  =========  ======  ======
+TOTAL                                      113.2M         0K         0K      53.1M     315065      50.5M      2666K      5%     237
+

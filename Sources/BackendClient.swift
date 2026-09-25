@@ -36,6 +36,20 @@ actor BackendClient {
         return try Contract.decode(type, from: data)
     }
 
+    /// A journey run that may come back as "same as `previous_digest`". The short reply is a few
+    /// hundred bytes; a real result is megabytes, so only a small reply is tried as the short form.
+    func journey(request: [String: Any]) async throws -> JourneyOutcome {
+        guard let resources = Bundle.main.resourceURL else { throw failure("应用资源缺失，请重新安装。") }
+        let executable = resources.appendingPathComponent("Engine/photo-engine")
+        guard FileManager.default.isExecutableFile(atPath: executable.path) else { throw failure("内置整理引擎缺失，请重新安装。") }
+        let data = try await run(executable: executable, input: try JSONSerialization.data(withJSONObject: request))
+        if data.count < 4096, let reply = try? Contract.decode(JourneyUnchanged.self, from: data),
+           reply.unchanged == true, let digest = reply.digest {
+            return .unchanged(digest)
+        }
+        return .changed(try Contract.decode(JourneyResult.self, from: data))
+    }
+
     private func failure(_ message: String) -> NSError {
         NSError(domain: "PhotoDesk", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }

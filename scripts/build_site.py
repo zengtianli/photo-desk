@@ -7,6 +7,9 @@ from pathlib import Path
 import plistlib
 import re
 import shutil
+import sys
+sys.path.insert(0, str(Path.home() / "Apps/apps-portal/site"))
+import perf_block  # shared lightweight block; numbers come from perf/lightweight.json
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,7 +85,8 @@ def build(preview=False):
             return '<div class="media-pending">原生窗口操作录像待采集 · 仅限本地预览</div>'
         return f'<video controls playsinline preload="metadata" poster="{assets[poster]}"><source src="{assets[name]}" type="video/mp4">请下载视频后播放。</video>'
     values = {'VERSION': release['version'], 'BUILD': str(release['build']),
-              'SIZE': f'{release["bytes"] / 1024 / 1024:.1f} MB' if release['bytes'] else '体积待发行构建',
+              'SIZE': perf_block.size_mb(release['bytes']) if release['bytes'] else '体积待发行构建',
+              'LIGHT': perf_block.standalone_section(ROOT / 'perf/lightweight.json', release['version'], '#26796f') if release['bytes'] else '',
               'MIN_MACOS': release['minimum_macos'], 'FILENAME': release['filename'], 'SHA256': release['sha256'],
               'DOWNLOAD_URL': 'downloads/' + release['filename'] if manifest_file.is_file() else '#download',
               'TIMELINE_IMAGE': image('timeline.png', 'PhotoDesk 我的时间线原生窗口，合成样例按拍摄时间和已有相册归集'),

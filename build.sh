@@ -22,7 +22,7 @@ if [[ -d "$RES/Engine" ]]; then
   mv "$RES/Engine" "$OLD_ENGINE"
 fi
 ditto build/engine/photo-engine "$RES/Engine"
-cp icon/AppIcon.icns "$RES/AppIcon.icns"
+uv run python scripts/compress_icon.py icon/AppIcon.icns "$RES/AppIcon.icns"
 cp build/THIRD_PARTY_NOTICES.txt "$RES/THIRD_PARTY_NOTICES.txt"
 plutil -replace CFBundleDisplayName -string "$DISPLAY_NAME" "$APP/Contents/Info.plist"
 plutil -replace CFBundleName -string "$DISPLAY_NAME" "$APP/Contents/Info.plist"

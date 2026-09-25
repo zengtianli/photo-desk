@@ -1,0 +1,45 @@
+{
+ "window_s": 300.6,
+ "release_1.0.1_10": {
+  "pid": "25446",
+  "main_cpu_pct": 0.77,
+  "engine_runs_started_or_active": 4,
+  "engine_cpu_s": 18.9,
+  "engine_cpu_pct": 6.29,
+  "footprint_mb_samples": [
+   104.0,
+   84.0,
+   84.0,
+   85.0,
+   85.0,
+   85.0,
+   85.0,
+   85.0,
+   89.0,
+   89.0
+  ],
+  "footprint_mb_peak": 104.0,
+  "footprint_mb_median": 85.0
+ },
+ "next": {
+  "pid": "26134",
+  "main_cpu_pct": 0.61,
+  "engine_runs_started_or_active": 2,
+  "engine_cpu_s": 10.9,
+  "engine_cpu_pct": 3.63,
+  "footprint_mb_samples": [
+   83.0,
+   83.0,
+   83.0,
+   85.0,
+   85.0,
+   85.0,
+   85.0,
+   110.0,
+   88.0,
+   88.0
+  ],
+  "footprint_mb_peak": 110.0,
+  "footprint_mb_median": 85.0
+ }
+}

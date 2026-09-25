@@ -1,0 +1,29 @@
+{
+ "engine_runs": [
+  {
+   "pid": "38166",
+   "first_seen_s": 4.9,
+   "last_seen_s": 15.5,
+   "cpu_s": 7.11,
+   "peak_rss_mb": 232.0
+  },
+  {
+   "pid": "40842",
+   "first_seen_s": 80.5,
+   "last_seen_s": 93.5,
+   "cpu_s": 7.37,
+   "peak_rss_mb": 203.9
+  },
+  {
+   "pid": "45977",
+   "first_seen_s": 256.7,
+   "last_seen_s": 256.7,
+   "cpu_s": 0.99,
+   "peak_rss_mb": 61.6
+  }
+ ],
+ "engine_cpu_s_total": 15.47,
+ "engine_cpu_s_in_window": 7.37,
+ "window_s": 61.7,
+ "engine_cpu_pct_in_window": 11.94
+}

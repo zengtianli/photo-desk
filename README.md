@@ -6,6 +6,18 @@
 
 产品主页与安装教程：[PhotoDesk](https://app-mac-photodesk.tianli.cyou/)。主页发布状态以实际访问结果为准。
 
+<!-- lightweight:start -->
+## 轻量（本机实测）
+
+| 安装包 | 空闲内存 | 空闲 CPU | 冷启动到窗口出现 |
+|---|---|---|---|
+| **37.6 MB**（装好后 97.0 MB） | **85 MB** | **6.5%** | **1.5 s** |
+
+SwiftUI 原生窗口，不开 HTTP 服务；照片解析交给包内 PyInstaller 打包的 Python 引擎（安装体积主要来自它），以子进程运行、做完即退出。打开期间自动整理一直在跑：内容识别没做完时每批 12 张、隔 0.3 秒接着跑；识别完后每轮结束隔 60 秒再全量重跑一次引擎，不看图库有没有变化，空闲 CPU 主要花在这里。
+
+<sub>v1.0.1 (10) · Mac16,12 / Apple M4 / macOS 27.2 · 真实照片图库 6,373 项（2,714 个时间线片段） · 2026-09-26 本机实测。内存为 phys_footprint（活动监视器「内存」列同口径）；CPU 为静置后 60 秒内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
+<!-- lightweight:end -->
+
 ## 使用
 
 打开 `/Applications/PhotoDesk.app`。默认读取最近打开的照片图库，也可从右上角选择 `.photoslibrary`。

@@ -223,16 +223,26 @@ def build_plan(request, cfg):
     return plan
 
 
-def persist_plan(kind, library, records, examined, warnings, token=None):
+def plan_path(token):
+    return ROOT / 'plans' / f'{token}.json'
+
+
+def plan_record(kind, library, records, examined, warnings, token=None):
+    """The plan as persist_plan writes it, without touching disk."""
     token = token or str(uuid.uuid4())
-    path = ROOT / 'plans' / f'{token}.json'
-    csv_path = path.with_suffix('.csv')
+    return dict(id=token, kind=kind, library=str(Path(library).resolve()), created=now(),
+                examined=examined, warnings=warnings, csv_path=str(plan_path(token).with_suffix('.csv')), rows=records)
+
+
+def write_plan_record(plan):
     fields = ('cloud_guid', 'filename', 'date', 'action', 'target', 'note')
-    lib.write_plan([lib.PlanRow(**{k: r[k] for k in fields}) for r in records], csv_path)
-    plan = dict(id=token, kind=kind, library=str(Path(library).resolve()), created=now(),
-                examined=examined, warnings=warnings, csv_path=str(csv_path), rows=records)
-    atomic_json(path, plan)
+    lib.write_plan([lib.PlanRow(**{k: r[k] for k in fields}) for r in plan['rows']], Path(plan['csv_path']))
+    atomic_json(plan_path(plan['id']), plan)
     return plan
+
+
+def persist_plan(kind, library, records, examined, warnings, token=None):
+    return write_plan_record(plan_record(kind, library, records, examined, warnings, token))
 
 
 def resolve_deletion_rows(plan, selected, photos, cfg):

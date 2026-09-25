@@ -6,6 +6,18 @@ A native macOS photo timeline. On launch it automatically scans the entire libra
 
 Product website and installation guide: [PhotoDesk](https://app-mac-photodesk.tianli.cyou/). Verify the website’s publication status by visiting it.
 
+<!-- lightweight:start -->
+## Lightweight (measured)
+
+| Download | Idle memory | Idle CPU | Cold launch to window shown |
+|---|---|---|---|
+| **37.6 MB** (installed 97.0 MB) | **85 MB** | **6.5%** | **1.5 s** |
+
+Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size. The engine runs as a subprocess that exits when done. Auto-organizing keeps running while the app is open: until content recognition is finished, it processes batches of 12 photos back to back with a 0.3-second gap. After that, the engine does a full rebuild 60 seconds after each pass, whether or not the library changed, and that is where most idle CPU goes.
+
+<sub>v1.0.1 (10) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,373 items (2,714 timeline segments) · measured 2026-09-26. Memory is phys_footprint (the Memory column in Activity Monitor); CPU is CPU time ÷ wall time over 60 idle seconds; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<!-- lightweight:end -->
+
 ## Usage
 
 Open `/Applications/PhotoDesk.app`. It reads the most recently opened Photos library by default; you can also choose a `.photoslibrary` from the top right.

@@ -1,0 +1,40 @@
+PhotoDesk [41918]: 64-bit    Footprint: 83 MB (16384 bytes per page)
+  Dirty      Clean  Reclaimable    Regions    Category
+    ---        ---          ---        ---    ---
+  47 MB        0 B          0 B         46    Malloc Small
+  12 MB        0 B          0 B        120    CoreAnimation
+  10 MB        0 B          0 B         36    CG Raster Data
+3712 KB        0 B          0 B         28    Untagged
+1360 KB        0 B          0 B         13    Malloc Metadata
+ 975 KB        0 B          0 B          1    __DATA .../SwiftUI
+ 737 KB        0 B          0 B          1    page table
+ 624 KB        0 B          0 B          2    CoreServices
+ 574 KB        0 B          0 B       2879    unused dyld shared cache area
+ 525 KB        0 B          0 B          1    __DATA .../SwiftUICore
+ 443 KB        0 B          0 B          1    __DATA_DIRTY .../SwiftUI
+ 381 KB        0 B          0 B          1    __DATA_DIRTY .../SwiftUICore
+ 322 KB        0 B          0 B          1    __DATA .../AppKit
+ 304 KB        0 B          0 B          1    Malloc Tiny
+ 288 KB        0 B          0 B          6    Stack
+ 256 KB        0 B          0 B          4    CoreUI Image Data
+ 250 KB        0 B          0 B          1    __AUTH .../AppKit
+ 230 KB        0 B          0 B          1    __AUTH .../SwiftUI
+ 148 KB        0 B          0 B          1    __DATA .../Gestures
+ 128 KB        0 B          0 B          1    Accelerate Framework
+ 112 KB        0 B          0 B          1    __TPRO_CONST .../dyld
+ 111 KB        0 B          0 B          1    __DATA_DIRTY .../libswiftCore.dylib
+ 111 KB        0 B          0 B          1    __DATA_DIRTY .../AppKit
+ 110 KB        0 B          0 B          1    __DATA .../DesignLibrary
+ 106 KB        0 B          0 B          1    __DATA .../Foundation
+  86 KB        0 B          0 B          1    __AUTH .../SwiftUICore
+  82 KB        0 B          0 B          1    __DATA_DIRTY .../Foundation
+  67 KB        0 B          0 B          1    __AUTH .../libswiftPrespecialized.dylib
+  67 KB        0 B          0 B          1    __DATA .../SkyLight
+  64 KB        0 B          0 B          2    IOAccelerator
+  61 KB        0 B          0 B          1    __DATA_DIRTY .../DesignLibrary
+  48 KB        0 B          0 B          1    __DATA_DIRTY .../libsystem_pthread.dylib
+  48 KB        0 B          0 B          7    IOKit
+  48 KB        0 B          0 B          3    CoreGraphics
+  48 KB        0 B          0 B          1    Activity Tracing
+  48 KB        0 B          0 B          2    __DATA_CONST .../PhotoDesk
+  46 KB        0 B          0 B          1    __OBJC_RW .../libobjc.A.dylib

@@ -1,0 +1,7 @@
+Sort by top of stack, same collapsed (when >= 5):
+        __workq_kernreturn  (in libsystem_kernel.dylib)        14326
+        mach_msg2_trap  (in libsystem_kernel.dylib)        7376
+        _pthread_tsd_cleanup  (in libsystem_pthread.dylib)        342
+
+Binary Images:
+       0x100c20000 -        0x100ce43cf +cyou.tianli.PhotoDesk (1.0.1 - 10) <9584B5BD-A926-3C97-848C-3F2A27FA1C20> /Users/*/PhotoDesk.app/Contents/MacOS/PhotoDesk

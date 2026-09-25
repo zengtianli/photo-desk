@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 uv sync --locked --group build
 python3 scripts/vendor_engine.py
-uv run --group build pyinstaller --noconfirm --name photo-engine --onedir \
+uv run --group build python -m PyInstaller --noconfirm --name photo-engine --onedir \
   --distpath build/engine --workpath build/pyinstaller --specpath build \
   --paths "$PWD/vendor" --add-data "$PWD/backend/defaults.yaml":. \
   --collect-all osxphotos --collect-all photoscript --collect-all ocrmac \
