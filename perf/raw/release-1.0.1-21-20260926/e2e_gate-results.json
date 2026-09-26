@@ -1,0 +1,73 @@
+{
+ "P0_first_build": {
+  "passed": true,
+  "runs": 1
+ },
+ "P1_untouched": {
+  "passed": true,
+  "runs": 0
+ },
+ "P2_system_writes_ignored": {
+  "passed": true,
+  "runs": 0
+ },
+ "P3_edit_rebuilds_once": {
+  "passed": true,
+  "runs": 1,
+  "visible_after_s": 35.2
+ },
+ "P4_write_during_rebuild": {
+  "passed": true,
+  "runs": 2,
+  "visible_after_s": 33.2
+ },
+ "P5_burst_coalesced": {
+  "passed": true,
+  "runs": 1,
+  "visible_after_s": 68.7
+ },
+ "P6_untouched_again": {
+  "passed": true,
+  "runs": 0
+ },
+ "P7_same_result_not_rewritten": {
+  "passed": true,
+  "runs": 1,
+  "files_rewritten": false
+ },
+ "P8_edit_after_same_result": {
+  "passed": true,
+  "runs": 1,
+  "visible_after_s": 34.7
+ },
+ "engine_runs": {
+  "69070": [
+   4.8,
+   13.0
+  ],
+  "78102": [
+   231.0,
+   240.6
+  ],
+  "79525": [
+   280.9,
+   289.0
+  ],
+  "81582": [
+   330.2,
+   338.1
+  ],
+  "85088": [
+   410.9,
+   419.4
+  ],
+  "90274": [
+   522.9,
+   528.0
+  ],
+  "92345": [
+   599.8,
+   606.2
+  ]
+ }
+}

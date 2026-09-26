@@ -1,0 +1,8 @@
+{
+  "idle": {
+    "process": "63447",
+    "footprint_mb": 83.0,
+    "cpu_pct": 0.03,
+    "window_s": 60
+  }
+}

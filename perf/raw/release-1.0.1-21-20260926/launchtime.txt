@@ -1,0 +1,1 @@
+runs_ms=[1369, 1342, 1499, 2036, 2203] median_ms=1499  (launchtime <app> 5, LAUNCH_NEW=1, isolated data root + preference suite, load 35–43)

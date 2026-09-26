@@ -1,0 +1,52 @@
+{
+ "tag": "rel21-a",
+ "app": "<scratch>/pkg/PhotoDesk-1.0.1-21-arm64/PhotoDesk.app",
+ "start": "09:53:31",
+ "load_start": "{ 102.74 106.90 84.59 }",
+ "pid": 58774,
+ "window_start": "09:54:18",
+ "window_end": "09:55:26",
+ "load_end": "{ 76.23 96.49 83.32 }",
+ "window_s": [
+  45.4,
+  113.7
+ ],
+ "main": {
+  "process": "58774",
+  "footprint_mb": 82.0,
+  "cpu_pct": 0.08,
+  "window_s": 60
+ },
+ "total": {
+  "process": "58774",
+  "footprint_mb": 82.0,
+  "main_footprint_mb": 82.0,
+  "cpu_pct": 0.08,
+  "main_cpu_pct": 0.08,
+  "processes": [
+   {
+    "pid": 58774,
+    "name": "main",
+    "cpu_pct": 0.082,
+    "footprint_peak_mb": 82.0
+   }
+  ],
+  "window_s": 60,
+  "scope": "主进程 + XPC 辅助进程 + 子进程合计"
+ },
+ "footprint_after_kb": [
+  83968.0,
+  83968.0,
+  83968.0
+ ],
+ "engines_all": {
+  "58811": {
+   "first": 3.2,
+   "last": 12.0,
+   "cpu": 5.39,
+   "rss_kb": 206304,
+   "fp_kb": 206848.0
+  }
+ },
+ "engines_in_window": 0
+}

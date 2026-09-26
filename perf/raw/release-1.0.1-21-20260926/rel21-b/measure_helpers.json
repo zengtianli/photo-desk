@@ -1,0 +1,19 @@
+{
+  "idle": {
+    "process": "63447",
+    "footprint_mb": 83.0,
+    "main_footprint_mb": 83.0,
+    "cpu_pct": 0.03,
+    "main_cpu_pct": 0.03,
+    "processes": [
+      {
+        "pid": 63447,
+        "name": "main",
+        "cpu_pct": 0.033,
+        "footprint_peak_mb": 83.0
+      }
+    ],
+    "window_s": 60,
+    "scope": "主进程 + XPC 辅助进程 + 子进程合计"
+  }
+}

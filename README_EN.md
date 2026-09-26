@@ -11,11 +11,11 @@ Product website and installation guide: [PhotoDesk](https://app-mac-photodesk.ti
 
 | Download | Idle memory | Idle CPU | Cold launch to window shown |
 |---|---|---|---|
-| **37.6 MB** (installed 97.0 MB) | **85 MB** | **6.5%** | **1.5 s** |
+| **37.3 MB** (installed 92.0 MB) | **83 MB** | **0.1%** | **1.5 s** |
 
-Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size. The engine runs as a subprocess that exits when done. Auto-organizing keeps running while the app is open: until content recognition is finished, it processes batches of 12 photos back to back with a 0.3-second gap. After that, the engine does a full rebuild 60 seconds after each pass, whether or not the library changed, and that is where most idle CPU goes.
+Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size; it runs as a subprocess and exits when done. While the app is open it checks every 60 seconds, read-only, only the photo data the engine actually uses, so system analysis and search-index writes do not count as changes. If nothing relevant changed, the engine does not start; if it did, the timeline is rebuilt, and when the result matches what is already on screen nothing is rewritten or redrawn. Back-to-back batches of 12 photos run only during the first content recognition pass.
 
-<sub>v1.0.1 (10) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,373 items (2,714 timeline segments) · measured 2026-09-26. Memory is phys_footprint (the Memory column in Activity Monitor); CPU is CPU time ÷ wall time over 60 idle seconds; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.0.1 (21) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,373 items (2,714 timeline segments) · measured 2026-09-26. Memory is phys_footprint (the Memory column in Activity Monitor); CPU is CPU time ÷ wall time over 60 idle seconds; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## Usage

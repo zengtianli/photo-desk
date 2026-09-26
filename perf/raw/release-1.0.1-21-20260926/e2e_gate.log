@@ -1,0 +1,35 @@
+    2.1s isolated copy <scratch>/e2e/photodesk-e2e-w5myy19x/E2E.photoslibrary/database/Photos.sqlite 324 MB
+    2.6s pid 69011
+    4.8s ENGINE start 69070
+   45.0s PASS P0_first_build {"runs": 1}
+  120.1s PASS P1_untouched {"runs": 0}
+  120.2s WRITE system-0 stamp moved
+  140.3s WRITE system-1 stamp moved
+  160.2s WRITE system-2 stamp moved
+  180.3s WRITE system-3 stamp moved
+  205.2s PASS P2_system_writes_ignored {"runs": 0}
+  205.2s WRITE retitle-1 stamp moved
+  231.0s ENGINE start 78102
+  255.3s PASS P3_edit_rebuilds_once {"runs": 1, "visible_after_s": 35.2}
+  255.3s WRITE retitle-2 stamp moved
+  280.9s ENGINE start 79525
+  281.0s engine running: True
+  282.0s WRITE retitle-3-during-rebuild stamp moved
+  330.2s ENGINE start 81582
+  345.6s PASS P4_write_during_rebuild {"runs": 2, "visible_after_s": 33.2}
+  350.8s WRITE burst-0 stamp moved
+  354.8s WRITE burst-1 stamp moved
+  358.8s WRITE burst-2 stamp moved
+  362.8s WRITE burst-3 stamp moved
+  366.8s WRITE burst-4 stamp moved
+  370.8s WRITE burst-5 stamp moved
+  410.9s ENGINE start 85088
+  420.9s PASS P5_burst_coalesced {"runs": 1, "visible_after_s": 68.7}
+  491.1s PASS P6_untouched_again {"runs": 0}
+  491.1s WRITE imported-by-name stamp moved
+  522.9s ENGINE start 90274
+  571.2s PASS P7_same_result_not_rewritten {"runs": 1, "files_rewritten": false}
+  571.3s WRITE retitle-after-same stamp moved
+  599.8s ENGINE start 92345
+  607.1s PASS P8_edit_after_same_result {"runs": 1, "visible_after_s": 34.7}
+  607.3s RESULTS {"P0_first_build": true, "P1_untouched": true, "P2_system_writes_ignored": true, "P3_edit_rebuilds_once": true, "P4_write_during_rebuild": true, "P5_burst_coalesced": true, "P6_untouched_again": true, "P7_same_result_not_rewritten": true, "P8_edit_after_same_result": true}
