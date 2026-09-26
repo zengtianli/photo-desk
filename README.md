@@ -7,7 +7,7 @@
 产品主页与安装教程：[PhotoDesk](https://app-mac-photodesk.tianli.cyou/)。主页发布状态以实际访问结果为准。
 
 <!-- lightweight:start -->
-## 轻量（本机实测）
+## 资源占用
 
 | 安装包 | 空闲内存 | 空闲 CPU | 冷启动到窗口出现 |
 |---|---|---|---|
@@ -24,7 +24,7 @@ CPU 口径：8 分钟平均，含每 60 秒一次的图库检查；期间系统�
 - 图库检查（每 60 秒只读查询引擎实际读取的照片数据；连续得到相同结果时间隔最多延长到 3 倍）：每日 CPU 时间 1.5 分钟；平均 CPU 0.102 %；只在 App 打开时发生；cpu_min_per_day = 长窗口主进程 CPU 0.102% × 1440 分钟。图库没有相关变化时引擎不运行。
 - 自动整理引擎重建（只在时间线用到的照片数据变化时；一阵连续写入平静后合并为一次）：单次 CPU 时间样本 launch_first_build: 4.07, 5.39 秒；次数取决于图库实际变化；上一发布版不论变化与否每约 71–77 秒一次（折合每天 85–136 分钟 CPU，见 history）。
 
-<sub>v1.0.1 (21) · Mac16,12 / Apple M4 / macOS 27.2 · 真实照片图库 6,373 项（2,714 个时间线片段） · 2026-09-26 本机实测。内存为 phys_footprint（活动监视器「内存」列同口径）；CPU 为静置后 60 秒内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
+<sub>v1.0.1 (21) · Mac16,12 / Apple M4 / macOS 27.2 · 真实照片图库 6,373 项（2,714 个时间线片段） · 2026-09-26。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
 <!-- lightweight:end -->
 
 ## 使用
