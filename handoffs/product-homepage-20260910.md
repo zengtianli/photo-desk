@@ -1,5 +1,7 @@
 # PhotoDesk 产品主页与真实媒体 · 2026-09-10
 
+> 2026-09-26 更新：当前发行为 v1.0.1 build 21（轻量化，源提交 a8348b3），SHA-256 `0b114d9a167bad6468c1cfa9ab94f378c0021e84a9d14989058cc222361c3368`，GitHub Release `v1.0.1-21`，`build/site` 已按新包重建（下载、release.json、轻量块数字来自 `perf/lightweight.json` 顶层的发布包实测）。营销版本仍为 1.0.1：`scripts/build_site.py` 要求演示录像的 `recorded_version` 与发行版本一致，现有录像为 1.0.1 build 10，且此后 Sources 只改了后台刷新（BackendClient/Models/ViewModel），界面未变；将来升到 1.0.2 前需重录或复核受影响场景。站点尚待主线程部署并线上回读。下文 build 10 段为当时记录。
+
 本轮用户选择 PhotoDesk 做产品线。主页采用亮色青绿色品牌、真实截图、两段字幕演示、直接下载、安装教程与 FAQ；私有源码不公开。
 
 当前冻结发行：`/Users/tianli/Apps/mac/photo-desk/dist/PhotoDesk-1.0.1-10-arm64.zip`，v1.0.1 build 10，arm64、macOS 15+，ad-hoc 签名、未公证。SHA-256：`ca83de1b407771b86a92f3b72f60c620280077f4e2aea75c2520a4efef5e086b`。发行对应源提交 `ef19e9001c2faf7a335be80fdc55f79d2aee61a0`；本次只提交媒体、主页与剪辑工具，没有重新编译 App 或提升 build。
