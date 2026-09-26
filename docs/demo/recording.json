@@ -260,5 +260,16 @@
       }
     }
   },
-  "final_visual_review": "confirmed-by-media-reviewer"
+  "final_visual_review": "confirmed-by-media-reviewer",
+  "reused_for": {
+    "1.0.1 (21)": {
+      "recorded_version": "1.0.1 (10)",
+      "reviewed_commits": [
+        "19f7b73003c211d8c356240fd8545b956181be49",
+        "32a3ad8301ae468d9fa7399344af28c36be96ac3"
+      ],
+      "reason": "录像后修改为图标更新及后台图库变更检查/重复结果抑制；已核源码未改录像展示的时间线布局、选择或预览流程。页面保留原录制版本并明确沿用，不用旧录像证明新版耗时。",
+      "reviewed_at": "2026-09-26"
+    }
+  }
 }

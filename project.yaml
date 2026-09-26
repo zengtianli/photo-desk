@@ -4,3 +4,20 @@ form: mac
 lifecycle: active
 bundle_id: cyou.tianli.PhotoDesk
 origin: own
+# 交付流程（SOP）事实：app_sop.py 据此检查轻量/测试、演示素材、推广页、装机与发布，字段说明见
+# ~/Dev/tools/dev/lib/tools/macapp/app_sop.py 的 SOP_KEYS。
+sop:
+  test: uv run python -m unittest discover -s tests
+  ui:
+  - Sources/**
+  - Info.plist
+  - icon/**
+  - PhotoDesk.xcodeproj/**
+  media:
+  - docs/demo/*.png
+  - docs/demo/*.mp4
+  media_meta: docs/demo/recording.json
+  release: dist/release.json
+  build_number: git-count
+  site_build: python3 scripts/build_site.py
+  site_deploy: products-only

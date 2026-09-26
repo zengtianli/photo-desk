@@ -44,6 +44,9 @@ def build(preview=False):
         public_media_caption = (
             f'PhotoDesk v{evidence["recorded_version"]} build {evidence["recorded_build"]} · '
             '真实原生窗口，使用10张合成图片。原速片段已剪去等待，局部放大与补拍均有标注。')
+        if str(evidence['recorded_build']) != str(release['build']):
+            public_media_caption += (f' 当前下载为 build {release["build"]}，沿用以上操作录像；'
+                                     '新版本更新了图标与后台检查方式，录像不用于证明本版速度，资源实测见下方。')
     if not preview:
         if not (evidence.get('privacy_reviewed') is True and evidence.get('synthetic_inputs') is True):
             raise SystemExit('Real recordings and privacy review are required; preview placeholders cannot be published.')
