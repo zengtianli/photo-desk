@@ -66,7 +66,7 @@ SwiftUI 原生窗口，不开 HTTP 服务；照片解析交给包内 PyInstaller
 ## 构建和验证
 
 ```bash
-cd /Users/tianli/Apps/photo-desk
+# 在仓库根目录执行
 uv sync --locked --group build
 uv run python -m unittest discover -s tests -v
 bash build.sh                 # 构建内置引擎、SwiftUI、签名、安装

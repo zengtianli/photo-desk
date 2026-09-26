@@ -66,7 +66,7 @@ If access is denied, enable PhotoDesk in System Settings → Privacy & Security 
 ## Build and verification
 
 ```bash
-cd /Users/tianli/Apps/photo-desk
+# Run from the repository root
 uv sync --locked --group build
 uv run python -m unittest discover -s tests -v
 bash build.sh                 # 构建内置引擎、SwiftUI、签名、安装
