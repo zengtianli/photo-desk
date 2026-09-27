@@ -11,7 +11,7 @@ Product website and installation guide: [PhotoDesk](https://app-mac-photodesk.ti
 
 | Download | Idle memory | Idle CPU | Cold launch to window shown |
 |---|---|---|---|
-| **37.3 MB** (installed 92.0 MB) | **83 MB** | **0.1%** | **1.5 s** |
+| **37.3 MB** (installed 92.0 MB) | **87.0 MB** | **0.1%** | **1.5 s** |
 
 Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size; it runs as a subprocess and exits when done. While the app is open it checks every 60 seconds, read-only, only the photo data the engine actually uses, so system analysis and search-index writes do not count as changes. If nothing relevant changed, the engine does not start; if it did, the timeline is rebuilt, and when the result matches what is already on screen nothing is rewritten or redrawn. Back-to-back batches of 12 photos run only during the first content recognition pass.
 
