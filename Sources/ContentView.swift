@@ -87,8 +87,8 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.confirm) { confirmation }
         .sheet(isPresented: $model.confirmDelete) { deletionConfirmation }
-        .sheet(isPresented: Binding(get: { model.enlargedPhoto != nil }, set: { if !$0 { model.enlargedPhoto = nil } })) {
-            if let row = model.enlargedPhoto { LargePhotoPreview(row: row, previous: { model.movePhoto(-1) }, next: { model.movePhoto(1) }, reveal: { model.revealPhoto(row) }) }
+        .sheet(isPresented: Binding(get: { model.enlargedPhoto != nil }, set: { if !$0 { model.closePreview() } })) {
+            if let row = model.enlargedPhoto { LargePhotoPreview(row: row, previous: { model.movePhoto(-1) }, next: { model.movePhoto(1) }, reveal: { model.revealPhoto(row) }, close: { model.closePreview() }) }
         }
         .alert("导入一张验收测试图？", isPresented: $model.confirmFixture) {
             Button("取消", role: .cancel) { }
@@ -591,17 +591,17 @@ private struct NativeMoviePreview: NSViewRepresentable {
     }
 }
 
-private struct LargePhotoPreview: View {
+struct LargePhotoPreview: View {
     let row: PlanRow
     let previous: () -> Void
     let next: () -> Void
     let reveal: () -> Void
-    @Environment(\.dismiss) private var dismiss
+    let close: () -> Void
     @State private var image: NSImage?
     @State private var player: AVPlayer?
     var body: some View {
         VStack(spacing: 14) {
-            HStack { Text(row.filename).font(.headline); Spacer(); Button("上一张", systemImage: "chevron.left", action: previous); Button("下一张", systemImage: "chevron.right", action: next); Button("关闭") { dismiss() }.keyboardShortcut(.cancelAction) }
+            HStack { Text(row.filename).font(.headline); Spacer(); Button("上一张", systemImage: "chevron.left", action: previous); Button("下一张", systemImage: "chevron.right", action: next); Button("关闭", action: close).keyboardShortcut(.cancelAction) }
             if let player { NativeMoviePreview(player: player).frame(maxWidth: .infinity, maxHeight: .infinity) }
             else if let image {
                 Image(nsImage: image).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -56,7 +56,7 @@ struct ProductChecks {
         let timelinePlan = PhotoPlan(id: "timeline", kind: "journey", library: "/fake", created: "", examined: rows.count, warnings: [], csvPath: "", rows: rows)
         let event = JourneyEvent(id: "event", title: "片段", group: "测试", date: "", endDate: "", count: 35, tracks: ["全部"], people: [], place: "", evidence: [], cover: rows[0])
         let second = JourneyEvent(id: "second", title: "第二片段", group: "第二组", date: "", endDate: "", count: 35, tracks: ["全部"], people: [], place: "", evidence: [], cover: rows[35])
-        model.journey = JourneyResult(library: "/fake", generated: "", total: rows.count, analyzed: 0, pending: rows.count, unavailable: 0, failed: 0, albums: 1, events: [event, second], tracks: [], plan: timelinePlan, duplicates: timelinePlan)
+        model.journey = JourneyResult(library: "/fake", generated: "", total: rows.count, analyzed: 0, pending: rows.count, unavailable: 0, failed: 0, albums: 1, events: [event, second], tracks: [], plan: timelinePlan, duplicates: timelinePlan, digest: nil)
         model.navigate(.journey)
         model.selectEvent(event)
         precondition(model.activeEvent == nil && model.selectedEventIDs == ["event"] && model.selected.count == 34)

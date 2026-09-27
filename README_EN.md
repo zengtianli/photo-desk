@@ -6,6 +6,8 @@ A native macOS photo timeline. On launch it automatically scans the entire libra
 
 Product website and installation guide: [PhotoDesk](https://app-mac-photodesk.tianli.cyou/). Verify the website’s publication status by visiting it.
 
+Read the local [getting-started guide and captioned demos (Chinese)](docs/demo/tutorial.md), or see the [fixed acceptance commands](scripts/accept/README.md) for development verification.
+
 <!-- lightweight:start -->
 ## Resource use
 

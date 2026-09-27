@@ -73,7 +73,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+/// Dispatch before SwiftUI creates its default model, scenes or keyboard controls.
 @main
+enum PhotoDeskEntry {
+    @MainActor static func main() {
+        if CommandLine.arguments.contains("--ui-self-test") {
+            PhotoDeskUISelfTest.launch()
+        } else {
+            PhotoDeskApp.main()
+        }
+    }
+}
+
 struct PhotoDeskApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model: PhotoDeskModel

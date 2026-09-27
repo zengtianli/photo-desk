@@ -439,10 +439,11 @@ final class PhotoDeskModel: ObservableObject {
         if enlargedPhoto != nil { enlargedPhoto = rows[target] }
     }
     func togglePreview() {
-        if enlargedPhoto != nil { enlargedPhoto = nil; return }
+        if enlargedPhoto != nil { closePreview(); return }
         guard canPreview else { return }
         enlargedPhoto = previewRow
     }
+    func closePreview() { enlargedPhoto = nil }
     func performAction(_ action: PhotoAction) {
         switch action {
         case .toggleWindow:
@@ -473,7 +474,7 @@ final class PhotoDeskModel: ObservableObject {
         guard gridFocused || enlargedPhoto != nil else { return false }
         if code == 49 && flags.isEmpty && (canPreview || enlargedPhoto != nil) { togglePreview(); return true }
         if code == 53 && flags.isEmpty {
-            if enlargedPhoto != nil { enlargedPhoto = nil } else if timelineVisible { clearEventSelection() } else { selected = []; focusedPhotoID = nil }
+            if enlargedPhoto != nil { closePreview() } else if timelineVisible { clearEventSelection() } else { selected = []; focusedPhotoID = nil }
             return true
         }
         if flags.isEmpty || flags == .shift {
@@ -484,6 +485,8 @@ final class PhotoDeskModel: ObservableObject {
         return false
     }
     func startProductControls() {
+        // The isolated in-process renderer must never attach input monitors.
+        guard !CommandLine.arguments.contains("--ui-self-test") else { return }
         guard keyboardMonitor == nil else { return }
         _ = shortcuts
         keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in

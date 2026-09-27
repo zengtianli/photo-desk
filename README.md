@@ -6,6 +6,8 @@
 
 产品主页与安装教程：[PhotoDesk](https://app-mac-photodesk.tianli.cyou/)。主页发布状态以实际访问结果为准。
 
+仓库内可直接阅读[上手教程与字幕演示](docs/demo/tutorial.md)；开发验收入口见[固定验收说明](scripts/accept/README.md)。
+
 <!-- lightweight:start -->
 ## 资源占用
 

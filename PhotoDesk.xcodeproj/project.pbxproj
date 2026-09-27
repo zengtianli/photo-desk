@@ -14,6 +14,7 @@
 		BF0000000000000000000105 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF0000000000000000000205 /* Models.swift */; };
 		BF0000000000000000000106 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = BF0000000000000000000206 /* AppIcon.icns */; };
 		BF0000000000000000000107 = {isa = PBXBuildFile; fileRef = BF0000000000000000000207; };
+		BF0000000000000000000108 = {isa = PBXBuildFile; fileRef = BF0000000000000000000208; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		BF0000000000000000000301 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BF0000000000000000000401 /* PhotoDesk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoDesk.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BF0000000000000000000207 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductControls.swift; sourceTree = "<group>"; };
+		BF0000000000000000000208 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UISelfTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +68,7 @@
 				BF0000000000000000000204 /* BackendClient.swift */,
 				BF0000000000000000000205 /* Models.swift */,
 				BF0000000000000000000207 /* ProductControls.swift */,
+				BF0000000000000000000208 /* UISelfTest.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -145,6 +148,7 @@
 				BF0000000000000000000104 /* BackendClient.swift in Sources */,
 				BF0000000000000000000105 /* Models.swift in Sources */,
 				BF0000000000000000000107 /* ProductControls.swift in Sources */,
+				BF0000000000000000000108 /* UISelfTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
