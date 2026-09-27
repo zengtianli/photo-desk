@@ -21,3 +21,8 @@ sop:
   build_number: git-count
   site_build: python3 scripts/build_site.py
   site_deploy: products-only
+  product:
+    distribution: public
+    source_visibility: public
+    source_url: https://github.com/zengtianli/photo-desk
+    rationale: 按时间与内容整理照片，先看清分组和建议，再决定如何处理。 面向外部使用者提供现有公开产品与源码入口，持续维护获取、教程和版本证据。
