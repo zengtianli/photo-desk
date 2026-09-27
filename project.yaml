@@ -1,5 +1,7 @@
 name: photo-desk
-display_name: PhotoDesk
+name_en: PhotoDesk
+name_zh: 照片台
+display_name: PhotoDesk · 照片台
 form: mac
 lifecycle: active
 bundle_id: cyou.tianli.PhotoDesk
