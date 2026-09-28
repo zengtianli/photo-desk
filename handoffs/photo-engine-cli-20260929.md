@@ -23,6 +23,6 @@
 
 ## 后续
 
-- 推送 photo-desk / apple 仓、发行和主页部署由 Chapter 的「一键解决全部」接续；推送前按卡片风险节再 grep `/Users/`、猫名、`Dev/tools/kb`（本轮 diff 与冻结包检查为零）。
-- 不在第一期：apple 根依赖瘦身、App 菜单「安装命令行工具…」、历史 plans/ocr 迁移、`~/Dev/tools/kb/bin/doc.py` 的 `SOURCE` 失效路径。
+- 推送 photo-desk / apple 仓、发行和主页部署由 Chapter 的「一键解决全部」接续；推送前按卡片风险节再查私人路径、猫名与本机知识库路径（本轮 diff 与冻结包检查为零）。
+- 不在第一期：apple 根依赖瘦身、App 菜单「安装命令行工具…」、历史 plans/ocr 迁移、本机知识库 doc.py 的 SOURCE 失效路径。
 - 回滚：两仓各自 `git revert`；`chapter unarchive --app photo`（先 revert stub）；删 `~/.local/bin/photodesk`；旧 App 从废纸篓放回。
