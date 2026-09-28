@@ -9,6 +9,7 @@ import json
 import sqlite3
 
 from _common import engine, fixture, report, require
+from cli_checks import recovery as cli_recovery
 
 
 def successful(request, env):
@@ -36,6 +37,7 @@ def cache_rows(index):
 def main():
     checks = {}
     with fixture("recovery") as (root, env):
+        cli_recovery(root, env, checks)
         state = root / "state"
         snapshot = successful({"command": "journey-snapshot"}, env)
         require(snapshot["total"] == 10, "Synthetic library was not fully read")

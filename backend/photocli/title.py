@@ -25,8 +25,6 @@ from .lib import (
     write_plan,
 )
 
-DOCS_DB = Path(os.environ.get("PHOTOCLI_DOCS_DB", Path.home() / "Dev/tools/kb/data/documents.db"))
-
 # 场景标签 → 中文(只映射常见的,未命中跳过该标签)
 SCENE_CN = {
     "Cat": "猫", "Feline": "猫", "Felinae": "猫", "Kitten": "猫",
@@ -41,8 +39,6 @@ SCENE_CN = {
     "Car": "车", "Vehicle": "车", "Furniture": "家具", "Art": "艺术",
     "Snow": "雪", "Night": "夜景",
 }
-PET_NAMES = {"大白"}
-
 
 def _place_part(photo) -> str:
     pl = getattr(photo, "place", None)
@@ -52,7 +48,7 @@ def _place_part(photo) -> str:
     return pl.name.split(",")[0].strip()
 
 
-def _subject_part(photo, sens_map: dict) -> str:
+def _subject_part(photo, sens_map: dict, cfg=None) -> str:
     guid = photo.cloud_guid
     # 1) 敏感证件:只 类型+人名,绝不放号码
     if guid in sens_map:
@@ -62,7 +58,8 @@ def _subject_part(photo, sens_map: dict) -> str:
     persons = [p for p in (photo.persons or []) if p and p != "_UNKNOWN_"]
     if persons:
         p0 = persons[0]
-        return f"猫·{p0}" if p0 in PET_NAMES else p0
+        pet_names = set((cfg or load_config()).section('classify').get('pet_faces', []) or [])
+        return f"猫·{p0}" if p0 in pet_names else p0
     # 3) 场景标签(第一个能映射成中文的)
     for lab in (photo.labels or []):
         if lab in SCENE_CN:
@@ -70,12 +67,16 @@ def _subject_part(photo, sens_map: dict) -> str:
     return ""
 
 
-def _load_sensitive_map() -> dict:
+def _load_sensitive_map(cfg=None) -> dict:
     """cloud_guid -> (person, doc_type),来自 documents.db(只读类型/人名,不读号码)。"""
-    if not DOCS_DB.exists():
+    configured = os.environ.get('PHOTOCLI_DOCS_DB') or (cfg or load_config()).raw.get('docs_db')
+    if not configured:
+        return {}
+    docs_db = Path(configured).expanduser().resolve()
+    if not docs_db.is_file():
         return {}
     out = {}
-    con = sqlite3.connect(DOCS_DB)
+    con = sqlite3.connect(docs_db.as_uri() + '?mode=ro', uri=True)
     try:
         for guid, person, dtype in con.execute(
             "SELECT cloud_guid, person, doc_type FROM documents WHERE cloud_guid IS NOT NULL"
@@ -88,22 +89,22 @@ def _load_sensitive_map() -> dict:
     return out
 
 
-def _make_title(photo, sens_map: dict) -> str:
+def _make_title(photo, sens_map: dict, cfg=None) -> str:
     d = getattr(photo, "date", None)
     date_part = d.strftime("%Y-%m") if d else ""
     place = _place_part(photo)
-    subj = _subject_part(photo, sens_map)
+    subj = _subject_part(photo, sens_map, cfg)
     parts = [x for x in (date_part, place, subj) if x]
     return " · ".join(parts)
 
 
 def _build_rows(cfg) -> list[PlanRow]:
-    sens_map = _load_sensitive_map()
+    sens_map = _load_sensitive_map(cfg)
     rows = []
     for p in iter_photos(cfg):
         if not p.cloud_guid:
             continue
-        title = _make_title(p, sens_map)
+        title = _make_title(p, sens_map, cfg)
         if not title:
             continue
         rows.append(PlanRow(p.cloud_guid, p.original_filename or "", photo_date(p), "set-title", title))

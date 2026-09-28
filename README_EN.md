@@ -72,7 +72,23 @@ If access is denied, enable PhotoDesk in System Settings → Privacy & Security 
 - Runtime data: `~/Library/Application Support/PhotoDesk/`, including plans, ocr, history, and progress. Full OCR text is cached only locally; directory permissions protect it for the current user.
 - Native SwiftUI window with no HTTP service. Bundled Python, osxphotos, photoscript, and ocrmac are called through stdin/stdout JSON. Runtime operation does not depend on uv, Homebrew, the development directory, or other app projects.
 - Python is retained because the app actually uses `PhotosDB` and `PhotoInfo` for people/tags/Cloud GUID/fingerprint parsing, `PhotosAlbum` for hierarchical albums, and photoscript write-back interfaces. Public PhotoKit alone cannot equivalently replace the existing organization capabilities.
-- `vendor/photocli/` is a verifiable source snapshot of the original apple/photo engine. Normal builds use only this repository’s snapshot rather than importing another app. `scripts/vendor_engine.py --sync` is the explicit update entry point, with source-file hashes recorded in the manifest. Business algorithm fixes are made in the apple/photo original and then synced into the snapshot.
+- `backend/photocli/` is the sole source of the photo engine, originating from apple repository commit `75d955b`. The GUI and `photodesk` share one bundled engine, maintained, tested and built here; the legacy `photocli` command only forwards to the installed PhotoDesk.
+
+## Command line
+
+The App includes `photodesk`; no separate Python installation is needed. This repository's installer links it into `~/.local/bin`. After dragging a downloaded App into Applications, run:
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s /Applications/PhotoDesk.app/Contents/Resources/bin/photodesk "$HOME/.local/bin/photodesk"
+export PATH="$HOME/.local/bin:$PATH"
+photodesk --help
+photodesk audit --json
+```
+
+If the command path already exists, verify its origin before replacing it. Commands include audit, backup, classify-plan, classify-apply, ocr-scan, ocr-extract, shared-list, dedup-export, reconcile, triage, title-plan and title-apply. Write operations default to dry-run and require explicit `--apply`. When access is denied, grant Full Disk Access to the terminal running the CLI.
+
+CLI artifacts live in `~/Library/Application Support/PhotoDesk/cli/`, separate from the App's JSON plans. Use `--config` or `PHOTOCLI_CONFIG` to select a private YAML configuration; otherwise the CLI reads `cli-config.yaml` in the data directory, falling back to neutral bundled defaults. Personal configuration is never included in the App or public repository.
 
 ## Build and verification
 

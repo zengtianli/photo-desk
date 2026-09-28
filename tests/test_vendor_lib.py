@@ -1,4 +1,4 @@
-"""Error contracts of the vendored engine, without opening any real library."""
+"""Error contracts of the owned engine, without opening any real library."""
 from pathlib import Path
 import sqlite3
 import sys
@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import click
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'vendor'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
 from photocli import lib
 
 

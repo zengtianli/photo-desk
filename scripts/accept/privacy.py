@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Verify privacy boundaries with real, network-denied bundled-engine processes.
 
-All assets and mutations belong to a disposable synthetic fixture. The network
-result proves this tested workflow can run under enforced denial, not a complete
-audit of every application path or of the user's Photos permissions.
+Mutations belong to a disposable synthetic fixture. One additional real-library
+audit runs under enforced write denial and compares database bytes before/after;
+its output is retained only in memory and permission failures cannot pass.
 """
 import hashlib
 import json
@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 from _common import ENGINE, fixture, report, require
+from cli_checks import privacy as cli_privacy, real_library_privacy
 
 
 SANDBOX = Path("/usr/bin/sandbox-exec")
@@ -56,6 +57,7 @@ def rejected(request, env, message):
 def main():
     checks = {}
     with fixture("privacy") as (root, env):
+        cli_privacy(root, env, checks)
         # Unlike fixture's pre-created state directory, this path is created by
         # the production engine itself, so its actual umask is also exercised.
         state = root / "private-state"
@@ -134,8 +136,11 @@ else:
         require(not list(outside_state.iterdir()), "Symlink data root received analysis artifacts")
         checks["data_root_and_symlink_must_stay_inside_demo_root"] = True
 
+        real_library = real_library_privacy(root, env, checks)
+
     report("privacy", checks,
-           "真实引擎在禁止网络的子进程内完成合成图库归集与 Vision；写入/删除入口、素材与数据目录越界均拒绝，实际数据仅当前用户可读写。",
+           "完成引擎、CLI 私密输出与打包源码检查；真实图库只读结果为 " + real_library["real_library_audit"] + "。",
+           **real_library,
            network_scope="Kernel-enforced network denial for tested child processes; loopback positive control rejected. This is not a whole-app network audit.",
            permissions_scope="Engine-created local artifacts only; no existing user data or Photos permissions changed.")
 

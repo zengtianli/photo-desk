@@ -12,6 +12,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "build/DerivedData/Build/Products/Release/PhotoDesk.app"
 ENGINE = APP / "Contents/Resources/Engine/photo-engine"
+CLI = APP / "Contents/Resources/bin/photodesk"
 OUT = Path(os.environ.get("SOP_OUT_DIR", ROOT / "build/acceptance"))
 
 
@@ -55,6 +56,8 @@ def fixture(name):
         env = dict(os.environ, PHOTODESK_DEMO_ROOT=str(root),
                    PHOTODESK_DATA_ROOT=str(root / "state"), PHOTODESK_BACKGROUND="1",
                    PHOTODESK_PREFERENCES_SUITE=f"PhotoDesk.Test.Acceptance.{name}.{root.name}")
+        for key in ("PHOTOCLI_CONFIG", "PHOTOCLI_DATA_ROOT", "PHOTOCLI_DOCS_DB"):
+            env.pop(key, None)
         yield root, env
 
 
@@ -69,7 +72,6 @@ def engine(request, env, *, timeout=90):
 
 
 def report(name, checks, summary, **extra):
-    require(checks and all(checks.values()), "Acceptance assertions did not all pass")
     OUT.mkdir(parents=True, exist_ok=True)
     info = plistlib.loads((APP / "Contents/Info.plist").read_bytes())
     receipt = json.loads((ROOT / "perf/build-receipt.json").read_text())
@@ -78,6 +80,9 @@ def report(name, checks, summary, **extra):
                   version=info["CFBundleShortVersionString"], build=info["CFBundleVersion"],
                   source_sha256=receipt["source"]["sha256"],
                   app_sha256=receipt["artifact"]["sha256"],
-                  engine_sha256=hashlib.sha256(ENGINE.read_bytes()).hexdigest(), **extra)
+                  engine_sha256=hashlib.sha256(ENGINE.read_bytes()).hexdigest())
+    detail.update(extra)
     (OUT / f"{name}.detail.json").write_text(json.dumps(detail, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(detail, ensure_ascii=False))
+    if not checks or not all(checks.values()):
+        raise SystemExit(1)

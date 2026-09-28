@@ -72,7 +72,23 @@ CPU 口径：8 分钟平均，含每 60 秒一次的图库检查；期间系统�
 - 运行数据：`~/Library/Application Support/PhotoDesk/`，包括 plans、ocr、history、progress。OCR 全文仅在本地缓存；目录权限受当前用户保护。
 - SwiftUI 原生窗口，不启动 HTTP 服务。内置 Python、osxphotos、photoscript 和 ocrmac，经 stdin/stdout JSON 调用；运行不依赖 uv、Homebrew、开发目录或其他 App 项目。
 - 保留 Python 的原因：实际调用 `PhotosDB`、`PhotoInfo` 的人物/标签/Cloud GUID/指纹解析，以及 `PhotosAlbum` 的层级相册和 photoscript 写回接口。仅用公开 PhotoKit 不能等价替代现有整理能力。
-- `vendor/photocli/` 是原 apple/photo 引擎的可验证源码快照。正常构建仅使用本仓快照，不 import 另一个 App；`scripts/vendor_engine.py --sync` 是显式更新入口，manifest 保存源文件哈希。业务算法修正在 apple/photo 原版完成后同步快照。
+- `backend/photocli/` 是照片引擎唯一源码，源自 apple 仓的 `75d955b`。GUI 和 `photodesk` 使用同一内置引擎，修复、测试和打包均在本仓完成；旧 `photocli` 仅转发到已安装的 PhotoDesk。
+
+## 命令行
+
+App 内已包含 `photodesk`，无需另装 Python。本仓安装脚本会建立 `~/.local/bin/photodesk`；下载版拖入“应用程序”后，可在终端执行：
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s /Applications/PhotoDesk.app/Contents/Resources/bin/photodesk "$HOME/.local/bin/photodesk"
+export PATH="$HOME/.local/bin:$PATH"
+photodesk --help
+photodesk audit --json
+```
+
+如果命令路径已存在，请先核对其来源再替换。支持 audit、backup、classify-plan、classify-apply、ocr-scan、ocr-extract、shared-list、dedup-export、reconcile、triage、title-plan 和 title-apply；写库命令默认 dry-run，只有明确传入 `--apply` 才写入。CLI 缺少读库权限时，需给当前终端完全磁盘访问权限。
+
+CLI 产物保存在 `~/Library/Application Support/PhotoDesk/cli/`，和 App 的 JSON 计划分开；可用 `--config` 或 `PHOTOCLI_CONFIG` 指定私有 YAML 配置，默认读取数据目录中的 `cli-config.yaml`，不存在时用中性默认配置。个人配置不包含在 App 或公开仓库中。
 
 ## 构建和验证
 

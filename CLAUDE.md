@@ -10,7 +10,7 @@
 - 重复预选必须同时满足字节一致及保留副本覆盖独有元数据；保护、隐藏、编辑、视频和 Live Photo 不预选。后台刷新不能重置用户正在核对的勾选。删除仍只执行用户最终确认的精确资产。
 
 - SwiftUI + 内置冻结 Python 引擎。运行禁止 import 其他 App 或依赖开发目录；osxphotos 的图库解析能力和现有 photocli 算法是保留 Python 的依据。
-- vendor/photocli 是 apple/photo 的源码快照，先改源再显式同步；正常构建检查 manifest 的完整性。
+- backend/photocli 是照片引擎唯一源码（源自 apple 仓 75d955b）；GUI 与 App 内 photodesk CLI 共用冻结引擎，在本仓修改、验证和打包。旧 photocli 入口只转发，不维护第二份实现。
 - 只读生成计划；使用 Cloud GUID 映射，用户勾选并确认后写入同一份计划。执行前重新核对库路径、照片存在性、共享状态和标题冲突。
 - 不提供自动删除；共享内容仅只读。未下载原片不 OCR，不把空 OCR 当垃圾，不推断票据报销状态。
 - 手动删除走 NativePhotos：计划重新解析 → 精确匹配 PhotoKit 资产 → 用户逐项确认 → 系统确认 → 删除后回读。macOS 27 可能缺失旧 SystemLibraryPath 配置，不能据此误判图库；NativePhotos 必须匹配全部所选 UUID，否则整批拒绝。无 Cloud GUID 的本地照片只在原图库中用 UUID 解析。

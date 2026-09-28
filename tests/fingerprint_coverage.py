@@ -69,7 +69,7 @@ def traced_reads(library):
     sqlite3.connect = connect
     with tempfile.TemporaryDirectory() as data_root:
         os.environ['PHOTODESK_DATA_ROOT'] = data_root
-        sys.path[:0] = [str(ROOT / 'backend'), str(ROOT / 'vendor')]
+        sys.path[:0] = [str(ROOT / 'backend')]
         import bridge
         import journey
         request = {'command': 'journey-snapshot', 'library': library or '', 'limit': 1,

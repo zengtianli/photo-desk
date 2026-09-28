@@ -4,7 +4,6 @@ source /Users/tianli/Dev/tools/dev/lib/tools/macapp/xcode_env.sh
 xcode_env_use macosx
 cd "$(dirname "$0")"
 /opt/homebrew/bin/python3 /Users/tianli/Dev/tools/dev/lib/tools/macapp/check_codingkeys.py "$PWD"
-python3 scripts/vendor_engine.py
 if [[ "${SKIP_ENGINE_BUILD:-0}" != 1 ]]; then bash scripts/build_engine.sh; fi
 ENGINE="${PHOTODESK_ENGINE_OUT:-build}/engine/photo-engine"
 [[ -x "$ENGINE/photo-engine" ]]
@@ -35,6 +34,8 @@ if [[ -d "$RES/Engine" ]]; then
   mv "$RES/Engine" "$OLD_ENGINE"
 fi
 ditto "$ENGINE" "$RES/Engine"
+mkdir -p "$RES/bin"
+ln -sfn ../Engine/photo-engine "$RES/bin/photodesk"
 uv run python scripts/compress_icon.py icon/AppIcon.icns "$RES/AppIcon.icns"
 cp build/THIRD_PARTY_NOTICES.txt "$RES/THIRD_PARTY_NOTICES.txt"
 plutil -replace CFBundleDisplayName -string "$DISPLAY_NAME" "$APP/Contents/Info.plist"

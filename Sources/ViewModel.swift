@@ -127,7 +127,8 @@ final class PhotoDeskModel: ObservableObject {
         if [.classify, .triage, .sensitive, .title].contains(target) && plans[target] == nil { generate() }
     }
     private func request(_ command: String, extra: [String: Any] = [:]) -> [String: Any] {
-        var result: [String: Any] = ["command": command, "library": library, "request_id": requestID]
+        var result: [String: Any] = ["command": command, "library": library, "request_id": requestID,
+                                     "settings": preferences.engineOptions]
         result.merge(extra) { _, new in new }; return result
     }
     private func perform(_ message: String, work: @escaping @MainActor () async throws -> Void) {

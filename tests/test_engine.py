@@ -10,6 +10,7 @@ from unittest.mock import patch
 from unittest.mock import MagicMock
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'backend'))
 spec = importlib.util.spec_from_file_location('bridge', ROOT / 'backend/bridge.py')
 bridge = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bridge)

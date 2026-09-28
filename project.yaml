@@ -6,27 +6,29 @@ form: mac
 lifecycle: active
 bundle_id: cyou.tianli.PhotoDesk
 origin: own
+description: 原生照片时间线与本地整理，App 内置同源 photodesk CLI
 # 交付流程（SOP）事实：app_sop.py 据此检查轻量/测试、演示素材、推广页、装机与发布，字段说明见
 # ~/Dev/tools/dev/lib/tools/macapp/app_sop.py 的 SOP_KEYS。
 sop:
+  cli:
+    commands: [photodesk]
+  budget:
+    memory_mb: 250
   test: bash scripts/test.sh
   accept:
     functionality: uv run python scripts/accept/functionality.py
     recovery: uv run python scripts/accept/recovery.py
-    privacy: uv run python scripts/accept/privacy.py
+    privacy: uv run --group build python scripts/accept/privacy.py
     native_ui: uv run python scripts/accept/native_ui.py
   source:
   - Sources/**
-  - backend/*.py
+  - backend/**/*.py
   - backend/defaults.yaml
-  - vendor/photocli/**
-  - vendor/manifest.json
   - Info.plist
   - PhotoDesk.xcodeproj/**
   - build.sh
   - scripts/build_engine.sh
   - scripts/install_app.py
-  - scripts/vendor_engine.py
   - scripts/collect_notices.py
   - scripts/compress_icon.py
   - scripts/strip_release.py

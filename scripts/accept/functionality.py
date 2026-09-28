@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 from _common import ROOT, engine, fixture, report, require
+from cli_checks import functionality as cli_functionality
 
 
 SWIFT_CHECK = r'''
@@ -77,6 +78,7 @@ def swift_contract(root, replies):
 def main():
     checks = {}
     with fixture("functionality") as (root, env):
+        cli_functionality(root, env, checks)
         original = json.loads((root / "demo-input.json").read_text())
         expected = {row["uuid"] for row in original["photos"]}
         replies = {}

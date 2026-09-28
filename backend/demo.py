@@ -24,6 +24,7 @@ class Library:
                 fingerprint=digest, original_filename=path.name, original_filesize=path.stat().st_size,
                 date=date, date_modified=date, persons=[], albums=row.get('albums', []),
                 keywords=[], title=row.get('title', ''), description='', place=None, location=(None, None),
+                latitude=None, longitude=None,
                 shared=False, shared_library=False, syndicated=False, saved_to_library=True,
                 isphoto=True, ismovie=False, live_photo=False, hasadjustments=False, hidden=False,
                 favorite=False, labels=[], uti='public.png', screenshot=False)

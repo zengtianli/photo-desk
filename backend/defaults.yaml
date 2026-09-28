@@ -11,6 +11,7 @@ protect:
   named_persons: true
   keywords: ["🔒敏感", "_keep"]
 classify:
+  album_template: "{year}/{year}-{month:02d}"
   pet_faces: []
   scene_labels: ["Cat", "Document", "Food", "Plant", "Sky"]
 ocr:
@@ -23,5 +24,15 @@ ocr:
     银行卡: '\b\d{16,19}\b'
     手机号: '\b1[3-9]\d{9}\b'
 triage:
+  fulltext: ocr/fulltext.jsonl
+  buckets:
+    junk: "PhotoDesk/文字较少·待核对"
+    receipt: "PhotoDesk/票据·保留"
+    reimbursed: "PhotoDesk/票据·保留"
+    guide: "PhotoDesk/攻略·保留"
+    unsure: "PhotoDesk/截图·待核对"
   reimburse_months: 6
   guide_keywords: ["攻略", "行程", "景点", "门票", "酒店", "路线", "自由行"]
+delete:
+  album_prefix: "PhotoDesk/待删除候选-"
+  require_backup: true

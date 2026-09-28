@@ -17,8 +17,8 @@ from typing import Any, Iterable
 
 import yaml
 
-REPO_ROOT = Path(os.environ.get("PHOTOCLI_DATA_ROOT", Path(__file__).resolve().parents[2]))
-CONFIG_PATH = Path(os.environ.get("PHOTOCLI_CONFIG", Path(__file__).resolve().parents[1] / "config.yaml"))
+REPO_ROOT = Path(os.environ.get("PHOTOCLI_DATA_ROOT", Path.home() / "Library/Application Support/PhotoDesk/cli"))
+CONFIG_PATH = Path(os.environ.get("PHOTOCLI_CONFIG", Path(__file__).resolve().parents[1] / "defaults.yaml"))
 
 
 # ---------------- 配置 ----------------
@@ -34,6 +34,10 @@ class Config:
         return os.path.expanduser(lib)
 
     def path(self, key: str) -> Path:
+        if os.environ.get('PHOTODESK_CLI') == '1':
+            # Historical private configurations used absolute development paths.
+            # Product-generated CLI artifacts always remain in the private CLI area.
+            return REPO_ROOT / key
         p = Path(self.raw.get("paths", {}).get(key, f"data/{key}"))
         return p if p.is_absolute() else REPO_ROOT / p
 
@@ -91,6 +95,14 @@ def load_db(library: str | None = None):
     """
     import sqlite3
 
+    if os.environ.get('PHOTODESK_DEMO_ROOT'):
+        import click
+        from demo import Library
+        demo_root = Path(os.environ['PHOTODESK_DEMO_ROOT']).resolve()
+        if not REPO_ROOT.resolve().is_relative_to(demo_root):
+            raise click.ClickException('演示模式要求独立数据目录；未访问系统照片图库。')
+        return Library(demo_root)
+
     import click
     from osxphotos import PhotosDB
     where = library or "系统默认图库"
@@ -99,7 +111,7 @@ def load_db(library: str | None = None):
     except FileNotFoundError:
         raise click.ClickException(f"照片库不存在: {where}(检查 config.yaml 的 library)")
     except PermissionError:
-        raise click.ClickException(f"无权读取照片库: {where}(终端需要完全磁盘访问权限)")
+        raise click.ClickException(f"无权读取照片库: {where}(请给当前终端完全磁盘访问权限)")
     except sqlite3.Error as e:
         raise click.ClickException(f"照片库数据库读不了(损坏或不是 Photos 库): {where} ({type(e).__name__})")
     except Exception as e:  # osxphotos 解析未知布局时抛的各类错误

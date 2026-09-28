@@ -8,7 +8,7 @@ uv run python scripts/accept/build.py
   --check functionality --check recovery --check privacy --check native_ui --json
 ```
 
-构建由 Chapter 的 `build-receipt` 绑定当前 Swift、Python、vendor 与依赖输入。验收拒绝源码或可执行文件不匹配的旧包。四项命令共用 `_common.py`，每次生成独立临时合成图库、数据目录与 `PhotoDesk.Test.*` 偏好；不要求前台窗口、系统按键或剪贴板。
+构建由 Chapter 的 `build-receipt` 绑定当前 Swift、backend/photocli 与依赖输入。验收拒绝源码或可执行文件不匹配的旧包。四项命令共用 `_common.py`，每次生成独立临时合成图库、数据目录与 `PhotoDesk.Test.*` 偏好；不要求前台窗口、系统按键或剪贴板。
 
 - `functionality.py`：实际包内引擎归集、Vision/OCR、字节重复建议、计划回读与生产 Swift decoder。
 - `recovery.py`：独立进程恢复缓存、错误请求/坏输入保留状态、缺失计划重建、无变化不重写。

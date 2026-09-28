@@ -25,6 +25,12 @@ def run(app: Path, report: Path) -> dict:
         env = {'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'HOME': str(root),
                'PHOTODESK_DATA_ROOT': str(root / 'PhotoDesk'), 'LANG': 'en_US.UTF-8'}
         results = []
+        cli = app / 'Contents/Resources/bin/photodesk'
+        assert cli.is_file(), 'Bundled CLI missing'
+        help_result = subprocess.run([str(cli), '--help'], cwd='/', env=env,
+                                     text=True, capture_output=True, timeout=60)
+        assert help_result.returncode == 0 and 'photodesk' in help_result.stdout, 'Relocated CLI help failed'
+        results.append({'check': 'relocated-cli-help', 'passed': True})
         for label, request, expected in (
             ('bundled-runtime', {'command': 'ping'}, True),
             ('local-vision-ocr', {'command': 'ocr-probe'}, True),

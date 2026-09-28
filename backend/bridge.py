@@ -13,11 +13,12 @@ import sys
 import uuid
 
 BASE = Path(__file__).resolve().parent
-if not getattr(sys, 'frozen', False):
-    sys.path.insert(0, str(BASE.parent / 'vendor'))
 ROOT = Path(os.environ.get('PHOTODESK_DATA_ROOT', Path.home() / 'Library/Application Support/PhotoDesk'))
-os.environ['PHOTOCLI_DATA_ROOT'] = str(ROOT)
-os.environ['PHOTOCLI_DOCS_DB'] = str(ROOT / 'optional-documents.db')
+CLI_MODE = __name__ == '__main__' and (len(sys.argv) > 1 or sys.stdin.isatty())
+os.environ['PHOTOCLI_DATA_ROOT'] = str(ROOT / 'cli' if CLI_MODE else ROOT)
+os.environ['PHOTODESK_CLI'] = '1' if CLI_MODE else '0'
+private_config = ROOT / 'cli-config.yaml'
+os.environ.setdefault('PHOTOCLI_CONFIG', str(private_config if private_config.is_file() else BASE / 'defaults.yaml'))
 
 import yaml
 from photocli import classify, lib, ocr, title, triage
@@ -52,6 +53,9 @@ def progress(request, text, done=0, total=0):
 
 def config(request):
     cfg = yaml.safe_load((BASE / 'defaults.yaml').read_text())
+    settings = request.get('settings', {})
+    if 'pet_names' in settings:
+        cfg['classify']['pet_faces'] = list(settings['pet_names'])
     if os.environ.get('PHOTODESK_DEMO_ROOT'):
         cfg['library'] = os.environ['PHOTODESK_DEMO_ROOT']
         return lib.Config(cfg)
@@ -148,8 +152,8 @@ def build_plan(request, cfg):
     elif kind == 'title':
         # Preserve non-empty user titles; use existing generator without an external knowledge DB.
         rows = [lib.PlanRow(p.cloud_guid, p.original_filename or '', lib.photo_date(p),
-                            'set-title', title._make_title(p, {}), '仅补充空标题')
-                for p in photos if not p.title and title._make_title(p, {})]
+                            'set-title', title._make_title(p, {}, cfg), '仅补充空标题')
+                for p in photos if not p.title and title._make_title(p, {}, cfg)]
         warnings = ['只为没有标题的照片补充建议，已有标题不覆盖。']
     elif kind in ('sensitive', 'triage'):
         sec = cfg.section('ocr')
@@ -446,5 +450,15 @@ def main():
         print(json.dumps({'ok': False, 'error': text}, ensure_ascii=False))
 
 
-if __name__ == '__main__':
+def dispatch(args=None, stdin=None):
+    args = sys.argv[1:] if args is None else args
+    stdin = sys.stdin if stdin is None else stdin
+    if args or stdin.isatty():
+        from photocli.cli import run
+        return run(args or ['--help'])
     main()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(dispatch())
