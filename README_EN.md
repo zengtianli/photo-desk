@@ -11,22 +11,13 @@ Read the local [getting-started guide and captioned demos (Chinese)](docs/demo/t
 <!-- lightweight:start -->
 ## Resource use
 
-| Download | Idle memory | Idle CPU | Cold launch to window shown |
+| Download | Idle memory | Idle CPU | Cold launch to window |
 |---|---|---|---|
-| **37.3 MB** (installed 92.0 MB) | **87.0 MB** | **0.1%** | **1.5 s** |
+| **37.4 MB** (installed 92.0 MB) | **84.9 MB** | **0.02%** | **479 ms** |
 
 Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size; it runs as a subprocess and exits when done. While the app is open it checks every 60 seconds, read-only, only the photo data the engine actually uses, so system analysis and search-index writes do not count as changes. If nothing relevant changed, the engine does not start; if it did, the timeline is rebuilt, and when the result matches what is already on screen nothing is rewritten or redrawn. Back-to-back batches of 12 photos run only during the first content recognition pass.
 
-Memory conditions: 不操作时约 83 MB，没有常驻辅助进程。整理引擎只在图库相关数据变化时运行几秒，另占约 200 MB，做完即退出。
-
-CPU conditions: 8 分钟平均，含每 60 秒一次的图库检查；期间系统写图库 7 次、都与时间线无关，引擎 0 次重建。
-
-Background tasks:
-
-- 图库检查（每 60 秒只读查询引擎实际读取的照片数据；连续得到相同结果时间隔最多延长到 3 倍）: CPU time per day 1.5 min; Average CPU 0.102 %; 只在 App 打开时发生；cpu_min_per_day = 长窗口主进程 CPU 0.102% × 1440 分钟。图库没有相关变化时引擎不运行。
-- 自动整理引擎重建（只在时间线用到的照片数据变化时；一阵连续写入平静后合并为一次）: CPU time samples per run launch_first_build: 4.07, 5.39 s; 次数取决于图库实际变化；上一发布版不论变化与否每约 71–77 秒一次（折合每天 85–136 分钟 CPU，见 history）。
-
-<sub>v1.0.1 (21) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,373 items (2,714 timeline segments) · measured 2026-09-26. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.0.1 (36) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,393 items (2,722 timeline segments) · measured 2026-09-29. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## Usage
