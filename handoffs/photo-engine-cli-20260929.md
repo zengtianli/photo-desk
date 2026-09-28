@@ -26,3 +26,13 @@
 - 推送 photo-desk / apple 仓、发行和主页部署由 Chapter 的「一键解决全部」接续；推送前按卡片风险节再查私人路径、猫名与本机知识库路径（本轮 diff 与冻结包检查为零）。
 - 不在第一期：apple 根依赖瘦身、App 菜单「安装命令行工具…」、历史 plans/ocr 迁移、本机知识库 doc.py 的 SOURCE 失效路径。
 - 回滚：两仓各自 `git revert`；`chapter unarchive --app photo`（先 revert stub）；删 `~/.local/bin/photodesk`；旧 App 从废纸篓放回。
+
+## 发行与性能接续（2026-09-29 03:00）
+
+- 推送 main 到 zengtianli/photo-desk（公开仓，Actions/Webhooks 均为 0，推送不触发构建）。推送前新提交 diff 中私人路径、猫名、本机知识库路径均为零。
+- GitHub Release v1.0.1-36（target 9b70f7b）：ZIP 37,369,897 B，SHA-256 647fcef8…，回读一致。`scripts/release.py --reuse-build` 的移动后发行包检查 5 项通过。
+- 主页按 `apps-portal/site/deploy.sh --products-only --dry-run` → `--deploy --plan <plan>` 单产品部署两次（发行、实测数字），16 个文件哈希核验通过；线上 release.json = 36 / 9b70f7b，页面含 photodesk 命令说明与新数字。
+- project.yaml 新增 `sop.measure: {archive: release}`；batch_measure 对发布包 36 实测：空闲 81 MB（页面按十进制显示 84.9 MB）、CPU 0.02%、冷启动中位 479 ms，负载均值约 7。旧 build 21 的后台任务长窗口数据被测量工具按版本移除，README 轻量块已由 perf_block 重生成。
+- Chapter check-only：perf / build-receipt / install / release / test 均 ok；cli_entry 验收 passed。
+
+仍待：演示素材（界面源码自 09-10 录制后有变化，需重录）；门户目录卡片数字由 Chapter 的门户部署自动项更新；装机图标由本人在 Chapter 确认（当前装机 36，包内 AppIcon.icns 与 icon/AppIcon.png 未改）。
