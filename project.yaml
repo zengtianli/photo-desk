@@ -12,6 +12,8 @@ description: 原生照片时间线与本地整理，App 内置同源 photodesk C
 sop:
   cli:
     commands: [photodesk]
+  measure:
+    archive: release
   budget:
     memory_mb: 250
   test: bash scripts/test.sh
