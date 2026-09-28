@@ -92,7 +92,7 @@ Third-party sources: [osxphotos](https://github.com/RhetTbull/osxphotos), [PyIns
 
 ## Direct distribution and website
 
-`python3 scripts/release.py` builds without installing, generating a ZIP, SHA-256, and `release.json` in `dist/`. It checks the bundled runtime, synthetic OCR, missing-library behavior, and error contract from a relocated app package. Read-only checks do not access system photos and do not replace first-time permissions, GUI verification, or deletion/recovery verification on a new computer. Third-party licenses are bundled; product source remains private.
+`python3 scripts/release.py` builds without installing, generating a ZIP, SHA-256, and `release.json` in `dist/`. It checks the bundled runtime, synthetic OCR, missing-library behavior, and error contract from a relocated app package. Read-only checks do not access system photos and do not replace first-time permissions, GUI verification, or deletion/recovery verification on a new computer. Third-party licenses are bundled; source is available in the [existing public repository](https://github.com/zengtianli/photo-desk).
 
 `python3 scripts/build_site.py --preview` generates a light-theme preview in `build/site/`. See [docs/demo/README.md](docs/demo/README.md) for real screenshots, videos, and evidence requirements. Production `python3 scripts/build_site.py` requires a complete release package and verified real media. Public files are passed to the existing site deployment entry point through the `site-manifest.json` allowlist; source directories and raw recordings must not be synced.
 

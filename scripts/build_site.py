@@ -46,7 +46,7 @@ def build(preview=False):
             '真实原生窗口，使用10张合成图片。原速片段已剪去等待，局部放大与补拍均有标注。')
         if str(evidence['recorded_build']) != str(release['build']):
             public_media_caption += (f' 当前下载为 build {release["build"]}，沿用以上操作录像；'
-                                     '新版本更新了图标与后台检查方式，录像不用于证明本版速度，资源实测见下方。')
+                                     '操作流程沿用原有界面；录像不用于证明本版速度，资源数据保留实际测量版本。')
     if not preview:
         if not (evidence.get('privacy_reviewed') is True and evidence.get('synthetic_inputs') is True):
             raise SystemExit('Real recordings and privacy review are required; preview placeholders cannot be published.')
@@ -112,7 +112,7 @@ def build(preview=False):
         (output / path.name).write_text(text)
     if manifest_file.is_file():
         # Source commit is public-safe, but never expose local source paths or staging locations.
-        public = {k: release[k] for k in ('product','version','build','architecture','minimum_macos','filename','sha256','bytes','signing','notarized','created_at')}
+        public = {k: release[k] for k in ('product','version','build','architecture','minimum_macos','filename','sha256','bytes','signing','notarized','created_at','source_commit')}
         (output / 'release.json').write_text(json.dumps(public, indent=2) + '\n')
         shutil.copyfile(archive, output / 'downloads' / archive.name)
         shutil.copyfile(ROOT / 'dist' / (archive.name + '.sha256'), output / 'downloads' / (archive.name + '.sha256'))

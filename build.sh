@@ -10,6 +10,8 @@ ENGINE="${PHOTODESK_ENGINE_OUT:-build}/engine/photo-engine"
 [[ -x "$ENGINE/photo-engine" ]]
 uv run python scripts/collect_notices.py
 DISPLAY_NAME="$(sed -n 's/^display_name: //p' project.yaml)"
+NAME_EN="$(sed -n 's/^name_en: //p' project.yaml)"
+BUNDLE_ID="$(sed -n 's/^bundle_id: //p' project.yaml)"
 # PHOTODESK_DERIVED_DATA / PHOTODESK_BUILD_LOG redirect the Xcode products and log for trial
 # builds (with --no-install); release.py packages the default build/DerivedData.
 DD="${PHOTODESK_DERIVED_DATA:-build/DerivedData}"
@@ -45,11 +47,7 @@ python3 scripts/strip_release.py "$APP"
 codesign --force --deep -s - "$APP"
 codesign --verify --deep --strict "$APP"
 if [[ "${1:-}" != --no-install ]]; then
-  DEST="/Applications/$DISPLAY_NAME.app"
-  if [[ -e "$DEST" ]]; then
-    mv "$DEST" "$HOME/.Trash/PhotoDesk-$(date +%Y%m%d-%H%M%S).app"
-  fi
-  ditto "$APP" "$DEST"
-  echo "已安装：$DEST"
+  python3 scripts/install_app.py "$APP" --name-en "$NAME_EN" \
+    --display-name "$DISPLAY_NAME" --bundle-id "$BUNDLE_ID"
 fi
 echo "构建完成：$APP"

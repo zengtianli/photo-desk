@@ -92,7 +92,7 @@ Xcode 选择和图标工厂复用总部现有引擎。构建产物位于 `build/
 
 ## 直接分发与主页
 
-`python3 scripts/release.py` 构建但不装机，在 `dist/` 生成 ZIP、SHA-256 和 `release.json`，并从移动后的应用包检查内置运行时、合成 OCR、缺失图库与错误契约。只读检查不访问系统照片；不能代替新电脑上的首次授权、GUI 或删除恢复验收。包内包含第三方许可，产品源码保持私有。
+`python3 scripts/release.py` 构建但不装机，在 `dist/` 生成 ZIP、SHA-256 和 `release.json`，并从移动后的应用包检查内置运行时、合成 OCR、缺失图库与错误契约。只读检查不访问系统照片；不能代替新电脑上的首次授权、GUI 或删除恢复验收。包内包含第三方许可，源码见[现有公开仓库](https://github.com/zengtianli/photo-desk)。
 
 `python3 scripts/build_site.py --preview` 生成亮色预览到 `build/site/`。真实截图、视频和证据契约见 [docs/demo/README.md](docs/demo/README.md)。正式 `python3 scripts/build_site.py` 要求完整发行包和经过核对的真实媒体；公开文件通过 `site-manifest.json` 白名单交给既有站群部署入口，禁止同步源码目录或原始录屏。
 

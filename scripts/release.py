@@ -1,4 +1,4 @@
-"""Build and stage a private-source, directly downloadable PhotoDesk release."""
+"""Build and stage a directly downloadable PhotoDesk release."""
 import argparse
 import datetime as dt
 import hashlib
@@ -12,13 +12,38 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def verified_source(app):
+    """Bind release provenance to the fresh-build receipt, never to packaging HEAD."""
+    import yaml
+    sys.path.insert(0, str(ROOT.parent / 'chapter/engine'))
+    from app_sop import app_source_snapshot, verify_build_receipt
+
+    config = yaml.safe_load((ROOT / 'project.yaml').read_text())['sop']
+    product = {'repo': ROOT, 'sop': config}
+    receipt_path = ROOT / 'perf/build-receipt.json'
+    if not receipt_path.is_file():
+        raise SystemExit('Build receipt missing; run: uv run python scripts/accept/build.py')
+    receipt = json.loads(receipt_path.read_text())
+    source = receipt.get('source', {})
+    if source.get('input_globs') != config['source']:
+        raise SystemExit('Build input scope changed; run: uv run python scripts/accept/build.py')
+    valid, reason = verify_build_receipt(product, app)
+    if not valid:
+        raise SystemExit(f'{reason}; run: uv run python scripts/accept/build.py')
+    current = app_source_snapshot(product, config['source'])
+    if current['dirty'] or source.get('dirty') or not source.get('commit'):
+        raise SystemExit('Release requires committed build inputs and a clean-source build receipt.')
+    return source
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--reuse-build', action='store_true', help='Validate and package the existing bundle; do not compile.')
     args = parser.parse_args()
     if not args.reuse_build:
-        subprocess.run(['bash', 'build.sh', '--no-install'], cwd=ROOT, check=True)
+        subprocess.run([sys.executable, 'scripts/accept/build.py'], cwd=ROOT, check=True)
     app = ROOT / 'build/DerivedData/Build/Products/Release/PhotoDesk.app'
+    source = verified_source(app)
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
     version, build = info['CFBundleShortVersionString'], info['CFBundleVersion']
     arch = subprocess.check_output(['lipo', '-archs', str(app / 'Contents/MacOS/PhotoDesk')], text=True).strip()
@@ -41,12 +66,11 @@ def main():
     subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(stage), str(archive)], check=True)
     sha = hashlib.sha256(archive.read_bytes()).hexdigest()
     (dist / f'{filename}.sha256').write_text(f'{sha}  {filename}\n')
-    source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
-    dirty = bool(subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=normal'], cwd=ROOT, text=True).strip())
     manifest = {'product': 'PhotoDesk', 'version': version, 'build': build, 'architecture': arch,
                 'minimum_macos': info['LSMinimumSystemVersion'], 'filename': filename,
                 'sha256': sha, 'bytes': archive.stat().st_size, 'signing': 'ad-hoc', 'notarized': False,
-                'source_commit': source, 'source_dirty': dirty, 'created_at': dt.datetime.now(dt.timezone.utc).isoformat(),
+                'source_commit': source['commit'], 'source_dirty': False,
+                'source_sha256': source['sha256'], 'created_at': dt.datetime.now(dt.timezone.utc).isoformat(),
                 'homepage': 'https://app-mac-photodesk.tianli.cyou/',
                 'privacy': 'Local photo analysis; no photo upload or external model calls.',
                 'photos_mutated_during_distribution_check': False}

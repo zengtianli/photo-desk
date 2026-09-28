@@ -25,6 +25,7 @@ sop:
   - PhotoDesk.xcodeproj/**
   - build.sh
   - scripts/build_engine.sh
+  - scripts/install_app.py
   - scripts/vendor_engine.py
   - scripts/collect_notices.py
   - scripts/compress_icon.py
