@@ -22,7 +22,7 @@ def app_version():
 
 @click.group(name='photodesk')
 @click.version_option(app_version(), prog_name='photodesk')
-@click.option("--config", "config_path", default=None, help="config.yaml 路径(默认包内)")
+@click.option("--config", "config_path", default=None, help="私有 YAML 配置路径(默认 PhotoDesk 数据目录的 cli-config.yaml，没有则用中性默认)")
 @click.pass_context
 def cli(ctx: click.Context, config_path: str | None) -> None:
     """iCloud Photos 整理工具。plan-file 工作流,dry-run 默认,删除永远手动。"""
