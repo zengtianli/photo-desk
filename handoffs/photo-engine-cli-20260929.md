@@ -43,3 +43,7 @@
 - 演示素材：`docs/demo/recording.json` 的 `reused_for` 登记 1.0.1 (36) 沿用 09-10 真实录像。依据：自 33 起界面源码只改 ViewModel 请求参数（附带猫名）；离屏自检 timeline.png 与原录像截图布局、文案一致。Chapter media 已 ok。
 - 目录卡片（apps 目录站）数字仍旧：修复需运行整站 `apps-portal/site/deploy.sh`（会刷新全部产品卡片与目录站 nginx 配置），超出本组件部署边界，留待本人授权或 Chapter 门户批量部署。
 - 装机 1.0.1 (36)、Chapter install ok；装机图标由本人确认。
+
+## 装机复核（2026-09-29 05:40）
+
+- 回读 /Applications/PhotoDesk.app = 1.0.1 (36)，包内 AppIcon.icns 与当前构建产物逐字节一致；Chapter check-only 的 install、build-receipt 均 ok，未重装。仅剩本人在 Chapter 确认 Dock/Finder 图标。
