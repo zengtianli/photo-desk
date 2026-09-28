@@ -270,15 +270,28 @@
     "limitation": "设置离屏截图覆盖表单内容，macOS 原生 TabView 顶部层未完整捕获；不据此声称完成前台设置标签栏的视觉验收。"
   },
   "reused_for": {
+    "1.0.1 (36)": {
+      "recorded_version": "1.0.1 (10)",
+      "reviewed_commits": [
+        "6af660dedca0765bc9aeface648cdd7e77f841f0"
+      ],
+      "reason": "本轮界面源码唯一变化是请求附带设置里的猫名（标题建议用），另加 App 内 photodesk 命令行与引擎源码迁移；时间线布局、片段选择、预览与设置界面未变。已对照 1.0.1 (36) 离屏自检截图与原录像截图，布局与文案一致。沿用原录像，不作为新版耗时或系统图库写回证据。",
+      "evidence": "perf/acceptance/native_ui.json",
+      "reviewed_at": "2026-09-29"
+    },
     "1.0.1 (33)": {
       "recorded_version": "1.0.1 (10)",
-      "reviewed_commits": ["8d9f49565a12d402768eb27a145bed188f2bb794"],
+      "reviewed_commits": [
+        "8d9f49565a12d402768eb27a145bed188f2bb794"
+      ],
       "reason": "本轮只同步照片分析引擎的配置/图库错误处理，并保留 PhotoDesk 权限恢复提示；Swift 界面、时间线归类、选择和预览流程均未改变，沿用此前已复核的真实合成图库录像，不作为新版性能或系统图库写回证据。",
       "reviewed_at": "2026-09-28"
     },
     "1.0.1 (31)": {
       "recorded_version": "1.0.1 (10)",
-      "reviewed_commits": ["e809a8d02e49958a470dbf435600dc1c4cfc48ac"],
+      "reviewed_commits": [
+        "e809a8d02e49958a470dbf435600dc1c4cfc48ac"
+      ],
       "reason": "沿用已复核的时间线、选择与预览实录：本轮变化为安装路径、构建来源校验和交付文案，Sources 与上一轮离屏验收完全一致。仍显示原录制版本，不用旧录像证明本版耗时或真实系统图库写回。",
       "reviewed_at": "2026-09-28"
     },
