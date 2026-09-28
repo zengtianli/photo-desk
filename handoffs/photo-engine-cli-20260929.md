@@ -36,3 +36,10 @@
 - Chapter check-only：perf / build-receipt / install / release / test 均 ok；cli_entry 验收 passed。
 
 仍待：演示素材（界面源码自 09-10 录制后有变化，需重录）；门户目录卡片数字由 Chapter 的门户部署自动项更新；装机图标由本人在 Chapter 确认（当前装机 36，包内 AppIcon.icns 与 icon/AppIcon.png 未改）。
+
+## 推广页与素材接续（2026-09-29 04:00）
+
+- homepage_mobile 失败原因：安装教程里新增的长 `ln -s` 命令在 390px 不换行（scrollWidth 456）。`site/style.css` 加 `.cli-note code` 断行规则，单产品部署后 homepage_mobile / homepage_desktop 固定验收均 passed。
+- 演示素材：`docs/demo/recording.json` 的 `reused_for` 登记 1.0.1 (36) 沿用 09-10 真实录像。依据：自 33 起界面源码只改 ViewModel 请求参数（附带猫名）；离屏自检 timeline.png 与原录像截图布局、文案一致。Chapter media 已 ok。
+- 目录卡片（apps 目录站）数字仍旧：修复需运行整站 `apps-portal/site/deploy.sh`（会刷新全部产品卡片与目录站 nginx 配置），超出本组件部署边界，留待本人授权或 Chapter 门户批量部署。
+- 装机 1.0.1 (36)、Chapter install ok；装机图标由本人确认。
