@@ -18,13 +18,17 @@ def run(app: Path, report: Path) -> dict:
     assert (app / 'Contents/Resources/THIRD_PARTY_NOTICES.txt').is_file(), 'Notices missing'
     with tempfile.TemporaryDirectory(prefix='PhotoDesk-isolated-data-') as scratch:
         root = Path(scratch)
+        # An existing empty directory passes bridge.config's path validation and
+        # exercises the bundled lib.load_db error handling inside PhotosDB.
+        missing_library = root / 'Missing.photoslibrary'
+        missing_library.mkdir()
         env = {'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'HOME': str(root),
                'PHOTODESK_DATA_ROOT': str(root / 'PhotoDesk'), 'LANG': 'en_US.UTF-8'}
         results = []
         for label, request, expected in (
             ('bundled-runtime', {'command': 'ping'}, True),
             ('local-vision-ocr', {'command': 'ocr-probe'}, True),
-            ('missing-library-error', {'command': 'audit', 'library': str(root / 'Missing.photoslibrary')}, False),
+            ('missing-library-error', {'command': 'audit', 'library': str(missing_library)}, False),
             ('unknown-command-error', {'command': 'invalid-distribution-check'}, False),
         ):
             result = subprocess.run([str(executable)], cwd='/', env=env, input=json.dumps(request),
@@ -34,7 +38,11 @@ def run(app: Path, report: Path) -> dict:
             if label == 'bundled-runtime':
                 assert data['data']['data_root'] == str(root / 'PhotoDesk')
             if label == 'missing-library-error':
-                assert '.photoslibrary' in data['error']
+                error = data['error']
+                assert error.startswith('照片库不存在: '), f'{label}: bundled friendly error missing: {error}'
+                assert str(missing_library.resolve()) in error, f'{label}: failed library not identified'
+                assert 'Traceback' not in error + result.stderr, f'{label}: traceback leaked'
+                assert not list(missing_library.iterdir()), f'{label}: synthetic library was modified'
             results.append({'check': label, 'passed': True})
         result = {'version': info['CFBundleShortVersionString'], 'build': info['CFBundleVersion'],
                   'architecture': subprocess.check_output(['lipo', '-archs', str(app / 'Contents/MacOS/PhotoDesk')], text=True).strip(),

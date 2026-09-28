@@ -63,6 +63,19 @@ def main():
         checks["fresh_process_recovers_incremental_cache"] = True
         checks["unchanged_snapshot_preserves_content_and_mtime"] = True
 
+        # An existing empty bundle gets past the App's path guard and reaches
+        # the actual vendored PhotosDB loader inside the frozen engine.
+        invalid_library = root / "Invalid.photoslibrary"
+        invalid_library.mkdir()
+        failure = engine({"command": "audit", "library": str(invalid_library)},
+                         dict(env, PHOTODESK_DEMO_ROOT=""))
+        require(not failure["ok"] and "照片库不存在:" in failure.get("error", "")
+                and "Traceback" not in failure["error"],
+                "Bundled library loader must return the synced readable error")
+        require(saved_files(state) == saved and cache_rows(index) == cache,
+                "Unreadable library damaged the existing synthetic index")
+        checks["unreadable_library_has_actionable_error_without_state_loss"] = True
+
         for request in (
             {"command": "acceptance-unknown-command"},
             {"command": "load-plan", "plan_id": "../invalid"},

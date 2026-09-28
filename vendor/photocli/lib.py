@@ -51,8 +51,16 @@ class Config:
 
 @functools.lru_cache(maxsize=1)
 def load_config(path: str | None = None) -> Config:
+    import click
     p = Path(path) if path else CONFIG_PATH
-    data = yaml.safe_load(p.read_text()) or {}
+    try:
+        data = yaml.safe_load(p.read_text()) or {}
+    except FileNotFoundError:
+        raise click.ClickException(f"配置文件不存在: {p}")
+    except yaml.YAMLError as e:
+        raise click.ClickException(f"配置文件不是合法 YAML: {p} ({type(e).__name__})")
+    if not isinstance(data, dict):
+        raise click.ClickException(f"配置文件顶层须为映射: {p}")
     return Config(raw=data)
 
 
@@ -77,9 +85,25 @@ def get_logger(name: str, cfg: Config | None = None) -> logging.Logger:
 # ---------------- PhotosDB ----------------
 @functools.lru_cache(maxsize=1)
 def load_db(library: str | None = None):
-    """加载 PhotosDB(慢,缓存)。返回 osxphotos.PhotosDB。"""
+    """加载 PhotosDB(慢,缓存)。返回 osxphotos.PhotosDB。
+
+    读不了的库转成一行 ClickException(exit 1),不把 osxphotos 的 Traceback 甩给用户。
+    """
+    import sqlite3
+
+    import click
     from osxphotos import PhotosDB
-    return PhotosDB(dbfile=library) if library else PhotosDB()
+    where = library or "系统默认图库"
+    try:
+        return PhotosDB(dbfile=library) if library else PhotosDB()
+    except FileNotFoundError:
+        raise click.ClickException(f"照片库不存在: {where}(检查 config.yaml 的 library)")
+    except PermissionError:
+        raise click.ClickException(f"无权读取照片库: {where}(终端需要完全磁盘访问权限)")
+    except sqlite3.Error as e:
+        raise click.ClickException(f"照片库数据库读不了(损坏或不是 Photos 库): {where} ({type(e).__name__})")
+    except Exception as e:  # osxphotos 解析未知布局时抛的各类错误
+        raise click.ClickException(f"照片库解析失败: {where} ({type(e).__name__})")
 
 
 def iter_photos(cfg: Config | None = None, *, scope_personal: bool | None = None) -> list:

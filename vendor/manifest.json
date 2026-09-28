@@ -1,9 +1,12 @@
 {
-  "source": "/Users/tianli/Apps/data/apple/photo/photocli/photocli",
+  "source": "/Users/tianli/Apps/apple-data/engine/photo/photocli/photocli",
+  "source_revisions": {
+    "lib.py": "75d955bdab0f2b35325db4efef54030158c10ba7"
+  },
   "sha256": {
     "backup.py": "915e09e0005d23d44914946668dc0248a56cf4dd919474513f16ed555c4730ed",
     "audit.py": "c6addb72e51417ca6edcee5aa9c4def343e05260c95c410e0ebdb7c23f998a15",
-    "lib.py": "63f72099d074564a1bb7daa1c3d2c213ad3722ce534b068a18b62b8875858ebd",
+    "lib.py": "6f5e4a8bce7c4154cc5276c216c0e9af8b9da95d2c19f71249bfb3b1103f2729",
     "classify.py": "e694a5a81fdedd97f20baf3a7dda868ad81529960ff17b54eeeec8f737c64b48",
     "__init__.py": "d126e7d230cc24f38e563e235fb45ea39aa61edb8cc57801357e586e3b5065fc",
     "shared.py": "d3be2d542459ca15ce8120b73d8954fc11b20b38d3be978e9b3133190e7724a8",

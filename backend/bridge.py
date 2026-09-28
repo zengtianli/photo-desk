@@ -440,7 +440,8 @@ def main():
         print(json.dumps({'ok': True, 'data': data}, ensure_ascii=False))
     except Exception as exc:
         text = str(exc)
-        if isinstance(exc, PermissionError) or 'authorization' in text.lower() or 'not authorized' in text.lower():
+        if (isinstance(exc, PermissionError) or isinstance(exc.__context__, PermissionError)
+                or 'authorization' in text.lower() or 'not authorized' in text.lower()):
             text = '无法访问照片。请在系统设置 → 隐私与安全性 → 完全磁盘访问权限中启用 PhotoDesk，然后重新打开。'
         print(json.dumps({'ok': False, 'error': text}, ensure_ascii=False))
 
