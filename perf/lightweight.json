@@ -525,5 +525,34 @@
         "tests": "2026-09-26 02:44：Python 32 项、LibraryStamp 检查、LibraryFingerprint 检查（11 类无关写入不触发、16 类相关写入触发）、contract_check（真实冻结结果与 unchanged 回复）全部通过"
       }
     }
-  ]
+  ],
+  "cli_task": {
+    "command": "photodesk audit --json",
+    "build": "1.0.1 (36)",
+    "measured_at": "2026-09-29 02:42",
+    "peak_rss_mb": 226.3,
+    "budget_mb": 250,
+    "median_wall_s": 2.05,
+    "median_cpu_s": 1.93,
+    "runs": [
+      {
+        "wall_s": 3.77,
+        "cpu_s": 2.45,
+        "peak_rss_mb": 226.3
+      },
+      {
+        "wall_s": 2.05,
+        "cpu_s": 1.93,
+        "peak_rss_mb": 225.4
+      },
+      {
+        "wall_s": 1.64,
+        "cpu_s": 1.56,
+        "peak_rss_mb": 226.1
+      }
+    ],
+    "data": "本机真实图库只读（4,692 项：照片 4,213、视频 479）；输出丢弃不落盘。",
+    "method": "/usr/bin/time -l，经 ~/.local/bin/photodesk 两级软链调用已安装 App 内引擎；每次新进程，首跑冷、后两次文件缓存已热；峰值 RSS 为单进程最大值（十进制 MB）。load avg 1m 约 9。",
+    "note": "非驻留命令，进程结束即释放；与 apple-data photo 旧入口同一预算 250 MB。"
+  }
 }
