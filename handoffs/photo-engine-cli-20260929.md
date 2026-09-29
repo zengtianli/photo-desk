@@ -47,3 +47,9 @@
 ## 装机复核（2026-09-29 05:40）
 
 - 回读 /Applications/PhotoDesk.app = 1.0.1 (36)，包内 AppIcon.icns 与当前构建产物逐字节一致；Chapter check-only 的 install、build-receipt 均 ok，未重装。仅剩本人在 Chapter 确认 Dock/Finder 图标。
+
+## 主页 facts.json 上线（2026-09-29 10:10）
+
+- apps-site 在本仓加的 facts.json 生成（a56aa58）已推送；`build_site.py` 重建后按 `deploy.sh --products-only --dry-run` → `--deploy --plan` 单产品部署 17 个文件，哈希核验通过。
+- 回读：主页 facts.json 与门户 `/api/facts` 均为 build 36、卡片文字「安装包 37.4 MB（安装后 92.0 MB） · 空闲内存 84.9 MB · 空闲 CPU 0.02% · 速度 479 ms」；homepage_desktop/mobile 复验 passed；Chapter check-only 的 card、install 均 ok。上轮「需整站门户部署」的决策因此不再需要。
+- 装机 1.0.1 (36) 已是当前构建，未重装；仅剩本人确认 Dock/Finder 图标。
