@@ -10,6 +10,7 @@ import shutil
 import sys
 sys.path.insert(0, str(Path.home() / "Apps/apps-portal/site"))
 import perf_block  # shared lightweight block; numbers come from perf/lightweight.json
+import product_facts  # facts.json published with the page for the portal and Chapter
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,8 +21,8 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def build(preview=False):
-    source, output = ROOT / 'site', ROOT / 'build/site'
+def build(preview=False, output=None):
+    source, output = ROOT / 'site', Path(output) if output else ROOT / 'build/site'
     manifest_file = ROOT / 'dist/release.json'
     if manifest_file.is_file():
         release = json.loads(manifest_file.read_text())
@@ -116,6 +117,7 @@ def build(preview=False):
         (output / 'release.json').write_text(json.dumps(public, indent=2) + '\n')
         shutil.copyfile(archive, output / 'downloads' / archive.name)
         shutil.copyfile(ROOT / 'dist' / (archive.name + '.sha256'), output / 'downloads' / (archive.name + '.sha256'))
+        product_facts.write(output, product_facts.from_repo(ROOT, product_id='photo-desk', icon='images/app-icon.png'))
     notices = ROOT / 'build/THIRD_PARTY_NOTICES.txt'
     if notices.exists():
         shutil.copyfile(notices, output / 'third-party-notices.txt')
@@ -132,4 +134,6 @@ def build(preview=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--preview', action='store_true')
-    build(parser.parse_args().preview)
+    parser.add_argument('--out', type=Path, default=ROOT / 'build/site', help='Site package root (default build/site)')
+    args = parser.parse_args()
+    build(args.preview, args.out)
