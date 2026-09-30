@@ -63,7 +63,7 @@ If access is denied, enable PhotoDesk in System Settings → Privacy & Security 
 - Runtime data: `~/Library/Application Support/PhotoDesk/`, including plans, ocr, history, and progress. Full OCR text is cached only locally; directory permissions protect it for the current user.
 - Native SwiftUI window with no HTTP service. Bundled Python, osxphotos, photoscript, and ocrmac are called through stdin/stdout JSON. Runtime operation does not depend on uv, Homebrew, the development directory, or other app projects.
 - Python is retained because the app actually uses `PhotosDB` and `PhotoInfo` for people/tags/Cloud GUID/fingerprint parsing, `PhotosAlbum` for hierarchical albums, and photoscript write-back interfaces. Public PhotoKit alone cannot equivalently replace the existing organization capabilities.
-- `backend/photocli/` is the sole source of the photo engine, originating from apple repository commit `75d955b`. The GUI and `photodesk` share one bundled engine, maintained, tested and built here; the legacy `photocli` command only forwards to the installed PhotoDesk.
+- The photo engine lives in `backend/`: `bridge.py` is the dispatcher the App and the command line share (`handle()`), `journey.py` is the timeline index, `photocli/` holds the classification, OCR and title algorithms (originating from apple repository commit `75d955b`), `desk_cli.py` turns the App's functions into `photodesk` commands, and `preferences.py` reads and writes settings the way the App does. The GUI and `photodesk` share one bundled engine, maintained, tested and built here; the legacy `photocli` command only forwards to the installed PhotoDesk.
 
 ## Command line
 
@@ -74,12 +74,53 @@ mkdir -p "$HOME/.local/bin"
 ln -s /Applications/PhotoDesk.app/Contents/Resources/bin/photodesk "$HOME/.local/bin/photodesk"
 export PATH="$HOME/.local/bin:$PATH"
 photodesk --help
-photodesk audit --json
 ```
 
-If the command path already exists, verify its origin before replacing it. Commands include audit, backup, classify-plan, classify-apply, ocr-scan, ocr-extract, shared-list, dedup-export, reconcile, triage, title-plan and title-apply. Write operations default to dry-run and require explicit `--apply`. When access is denied, grant Full Disk Access to the terminal running the CLI.
+If the command path already exists, verify its origin before replacing it. When access is denied, grant Full Disk Access to the terminal running the CLI; the first `apply --confirm` may also ask whether the terminal may control Photos.
 
-CLI artifacts live in `~/Library/Application Support/PhotoDesk/cli/`, separate from the App's JSON plans. Use `--config` or `PHOTOCLI_CONFIG` to select a private YAML configuration; otherwise the CLI reads `cli-config.yaml` in the data directory, falling back to neutral bundled defaults. Personal configuration is never included in the App or public repository.
+The window is for people, the commands are for agents: `photodesk` calls the same engine functions as the window and reads and writes the same timeline cache, plans, records and settings. Plans made from the command line appear in the App's Organize History, and the timeline the App built is readable from the command line. The library defaults to the App's (the library chosen in the App, otherwise the one Photos opened last); `--library PATH` picks another. Every read command takes `--json` and prints one object `{"ok": true, "command": …, …}`; a failure prints `{"ok": false, "error": …}` and exits 1, including failures before a command runs (usage errors, an unwritable data folder). Without `--json`, errors go to stderr. When following the system library, `timeline`, `duplicates` and `delete-check --event/--recommended` read only the timeline cache of the library Photos opened last; a cache from another library is an error, so run `photodesk refresh` first.
+
+```sh
+photodesk timeline --json --limit 20            # My Timeline: segments and recognition progress (cache, no rebuild)
+photodesk timeline --event <segment-id> --json  # photos in one segment
+photodesk refresh --json                        # like ⌘R: rebuild the timeline; writes only PhotoDesk's own index
+photodesk refresh --enrich --max-batches 5      # continue on-device content recognition; batch size follows App settings
+photodesk audit --json                          # Library Overview, same numbers as the App
+photodesk photos --month 2026-09 --json         # All Photos (read-only, saves no plan)
+photodesk duplicates --json                     # Duplicate Review: kept copy and suggested deletions
+photodesk plan classify --json                  # Generate Suggestions (library/classify/triage/sensitive/title)
+photodesk plans --json                          # Organize History (latest 30)
+photodesk plan-show <plan-id> --group <group> --csv-out list.csv
+photodesk apply <plan-id> --select-all          # Check and Write: pre-check only by default, library untouched
+photodesk apply <plan-id> --select 3,7 --confirm  # write to Photos, read back, receipt in history/
+photodesk delete-check --event <segment-id> --json  # delete pre-check, counts only; --verbose lists photos
+photodesk records --json                        # write receipts and delete records
+photodesk settings --json                       # App settings (13 fields and the library)
+photodesk settings set eventHours 4             # change one; refused while PhotoDesk runs
+photodesk doctor --json                         # engine, data folder, library access, cache (notes have ok: null); --ocr also writes one synthetic probe image to check OCR
+```
+
+| In the App | Command |
+|---|---|
+| My Timeline, switching timelines, searching segments, showing earlier segments | `timeline [--track] [--search] [--limit/--offset]` |
+| View Segment | `timeline --event ID` |
+| Refresh Library (⌘R), background recognition, retry failed recognition | `refresh [--enrich] [--batch] [--max-batches] [--retry-failed]` |
+| Library Overview | `audit [--details]` |
+| All Photos (by month, search) | `photos [--month] [--search]` |
+| Generate Suggestions for Classify, Screenshots & Receipts, Sensitive Photos, Photo Titles, All Photos | `plan KIND [--limit]` (OCR kinds take `--request-id`; poll with `progress ID`) |
+| Duplicate Review | `duplicates [--recommended-only]` |
+| Organize History, Open Plan, Export List | `plans`, `plan-show ID [--group] [--search] [--csv-out]` |
+| Selection (click/⌘/⇧, ⌘A, selected segments, duplicate preselection) | `--select ID,…`, `--select-group`, `--select-all`, `--event`, `--recommended` |
+| Check and Write → Confirm Write | `apply ID …` (writes only with `--confirm`; excludes concurrent App writes) |
+| Delete pre-check (⌘⌫) | `delete-check …` |
+| Local records | `records [--kind apply]`, `records --kind delete` |
+| Settings window | `settings`, `settings set KEY VALUE` |
+
+What stays in the App: **deleting photos** (PhotoKit and the system confirmation live in the App; the command line stops at `delete-check`); pausing/resuming automatic organizing (state of the running App; the persistent Automatic switch is `settings set automatic`); launch at login; Open in Photos, opening Photos, revealing records in Finder and privacy-pane links; importing the acceptance test photo; and interface gestures such as Space preview, zoom, video playback, grid size, live appearance changes, shortcut recording and cancelling a task. `settings set` accepts only values the Settings window can produce and refuses while PhotoDesk runs (the running App would overwrite the change). `photos` saves no plan; use `plan library` before a delete pre-check.
+
+Old command names remain as aliases of the same flow: `classify-plan`/`title-plan` = `plan classify|title`, `triage`/`ocr-scan` = `plan triage|sensitive` (with `--apply`, the new plan is then written in full), `classify-apply`/`title-apply` = `apply <latest plan of that kind> --select-all` (writes only with `--apply`). Old CSV plans are retired; titles are only suggested for untitled photos, and screenshot triage no longer creates a delete album. Command-line-only tools: `backup`, `ocr-extract`, `shared-list`, `dedup-export` and `reconcile`, with output in `~/Library/Application Support/PhotoDesk/cli/`. `reconcile` (read-only), `shared-list` (writes the shared-album checklist) and `dedup-export` take `--json`; `backup` and `ocr-extract` are long tasks and print text progress only. They read a private YAML file (`--config` or `PHOTOCLI_CONFIG`, by default `cli-config.yaml` in the data directory, else neutral bundled defaults). When `--config` is passed explicitly, its `library` also applies to the other commands. Personal configuration is never included in the App or public repository.
+
+The JSON pipe between the App and its engine (no arguments, request on stdin) is the App's internal contract: it exits 0 even on failure and the App reads the error from the JSON. Agents should use the commands above.
 
 ## Build and verification
 
@@ -93,7 +134,7 @@ bash build.sh --no-install    # 仅生成应用
 
 Xcode selection and icon generation reuse existing shared engines. Build output is `build/DerivedData/Build/Products/Release/PhotoDesk.app`. The local edition is for Apple Silicon and locally signed; it has not been released through the App Store or notarized for distribution.
 
-Engine diagnostics: `build/engine/photo-engine/photo-engine` accepts JSON on stdin, for example `{"command":"audit"}` and `{"command":"ocr-probe"}`. Read-only analysis results can be verified through actual Swift models and decoders using `tests/contract_check.swift`. Writes to the original library must not be used as unattended test data.
+Engine diagnostics: `photodesk doctor --ocr --json`. For the App's internal contract, `build/engine/photo-engine/photo-engine` accepts JSON on stdin, for example `{"command":"audit"}` and `{"command":"ocr-probe"}`. Read-only analysis results can be verified through actual Swift models and decoders using `tests/contract_check.swift`. Writes to the original library must not be used as unattended test data.
 
 Third-party sources: [osxphotos](https://github.com/RhetTbull/osxphotos), [PyInstaller packaging guide](https://pyinstaller.org/en/stable/usage.html). osxphotos 0.76.1 includes preliminary macOS 27 compatibility fixes; validation against the actual system is still required.
 

@@ -63,7 +63,7 @@ SwiftUI 原生窗口，不开 HTTP 服务；照片解析交给包内 PyInstaller
 - 运行数据：`~/Library/Application Support/PhotoDesk/`，包括 plans、ocr、history、progress。OCR 全文仅在本地缓存；目录权限受当前用户保护。
 - SwiftUI 原生窗口，不启动 HTTP 服务。内置 Python、osxphotos、photoscript 和 ocrmac，经 stdin/stdout JSON 调用；运行不依赖 uv、Homebrew、开发目录或其他 App 项目。
 - 保留 Python 的原因：实际调用 `PhotosDB`、`PhotoInfo` 的人物/标签/Cloud GUID/指纹解析，以及 `PhotosAlbum` 的层级相册和 photoscript 写回接口。仅用公开 PhotoKit 不能等价替代现有整理能力。
-- `backend/photocli/` 是照片引擎唯一源码，源自 apple 仓的 `75d955b`。GUI 和 `photodesk` 使用同一内置引擎，修复、测试和打包均在本仓完成；旧 `photocli` 仅转发到已安装的 PhotoDesk。
+- 照片引擎源码在 `backend/`：`bridge.py` 是 App 与命令行共用的调度（`handle()`），`journey.py` 是时间线索引，`photocli/` 是分类、OCR、标题等算法（源自 apple 仓 `75d955b`），`desk_cli.py` 把 App 功能做成 `photodesk` 命令，`preferences.py` 按 App 的方式读写设置。GUI 和 `photodesk` 使用同一内置引擎，修复、测试和打包均在本仓完成；旧 `photocli` 仅转发到已安装的 PhotoDesk。
 
 ## 命令行
 
@@ -74,12 +74,53 @@ mkdir -p "$HOME/.local/bin"
 ln -s /Applications/PhotoDesk.app/Contents/Resources/bin/photodesk "$HOME/.local/bin/photodesk"
 export PATH="$HOME/.local/bin:$PATH"
 photodesk --help
-photodesk audit --json
 ```
 
-如果命令路径已存在，请先核对其来源再替换。支持 audit、backup、classify-plan、classify-apply、ocr-scan、ocr-extract、shared-list、dedup-export、reconcile、triage、title-plan 和 title-apply；写库命令默认 dry-run，只有明确传入 `--apply` 才写入。CLI 缺少读库权限时，需给当前终端完全磁盘访问权限。
+如果命令路径已存在，请先核对其来源再替换。缺少读库权限时，需给当前终端“完全磁盘访问权限”；第一次 `apply --confirm` 写入时，系统可能询问是否允许终端控制“照片”。
 
-CLI 产物保存在 `~/Library/Application Support/PhotoDesk/cli/`，和 App 的 JSON 计划分开；可用 `--config` 或 `PHOTOCLI_CONFIG` 指定私有 YAML 配置，默认读取数据目录中的 `cli-config.yaml`，不存在时用中性默认配置。个人配置不包含在 App 或公开仓库中。
+窗口给人用，命令给 agent 用：`photodesk` 调用与窗口相同的引擎函数，读写同一份时间线缓存、计划、执行记录和设置，所以命令生成的计划会出现在 App 的“整理记录”里，App 生成的时间线命令也能直接读。图库默认与 App 相同（App 里选择的图库，否则“照片”最近打开的图库），可用 `--library PATH` 指定。所有读取命令加 `--json` 输出一个对象 `{"ok": true, "command": …, …}`；失败输出 `{"ok": false, "error": …}` 并以 1 退出（参数错误、数据目录不可写等命令开始前的失败也一样），不加 `--json` 时错误写到 stderr。跟随系统图库时，`timeline`、`duplicates` 和 `delete-check --event/--recommended` 只读“照片”最近打开的图库的时间线缓存；缓存属于别的图库时报错，先 `photodesk refresh`。
+
+```sh
+photodesk timeline --json --limit 20            # 我的时间线：片段、识别进度（读缓存，不重建）
+photodesk timeline --event <片段ID> --json      # 查看片段里的照片
+photodesk refresh --json                        # 同 ⌘R：重建时间线，只写 PhotoDesk 自己的索引
+photodesk refresh --enrich --max-batches 5      # 继续本机内容识别，每批数量默认取 App 设置
+photodesk audit --json                          # 图库概览，数字与 App 一致
+photodesk photos --month 2026-09 --json         # 全部照片（只读，不保存计划）
+photodesk duplicates --json                     # 重复核对：保留副本与建议删除项
+photodesk plan classify --json                  # 生成建议（library/classify/triage/sensitive/title）
+photodesk plans --json                          # 整理记录（最近 30 份）
+photodesk plan-show <计划ID> --group <分组> --csv-out 清单.csv
+photodesk apply <计划ID> --select-all           # 检查并写入：默认只预检，不改图库
+photodesk apply <计划ID> --select 3,7 --confirm # 确认写入“照片”，写后回读，记录进 history/
+photodesk delete-check --event <片段ID> --json  # 删除前核对，只给数量；--verbose 列出照片
+photodesk records --json                        # 写入回执与删除记录
+photodesk settings --json                       # App 设置（13 项与图库）
+photodesk settings set eventHours 4             # 修改一项；PhotoDesk 运行时拒绝
+photodesk doctor --json                         # 引擎、数据目录、读库权限、缓存（说明项 ok 为 null）；--ocr 另写一张合成样本图核对 OCR
+```
+
+| App 里的操作 | 命令 |
+|---|---|
+| 我的时间线、切换时间线、搜索片段、显示更早的片段 | `timeline [--track] [--search] [--limit/--offset]` |
+| 查看片段 | `timeline --event ID` |
+| 刷新图库（⌘R）、后台识别、重试失败的识别 | `refresh [--enrich] [--batch] [--max-batches] [--retry-failed]` |
+| 图库概览 | `audit [--details]` |
+| 全部照片（按月浏览、搜索） | `photos [--month] [--search]` |
+| 分类整理、截图与票据、敏感照片、照片标题、全部照片的“生成建议” | `plan KIND [--limit]`（OCR 类有 `--request-id`，另开终端 `progress ID`） |
+| 重复核对 | `duplicates [--recommended-only]` |
+| 整理记录、打开计划、导出清单 | `plans`、`plan-show ID [--group] [--search] [--csv-out]` |
+| 选择（单击/⌘/⇧、⌘A、选中片段、重复预选） | `--select ID,…`、`--select-group`、`--select-all`、`--event`、`--recommended` |
+| 检查并写入 → 确认写入 | `apply ID …`（加 `--confirm` 才写，与 App 的写入互斥） |
+| 删除前核对（⌘⌫） | `delete-check …` |
+| 本地记录 | `records [--kind apply]`、`records --kind delete` |
+| 设置窗口 | `settings`、`settings set KEY VALUE` |
+
+只留在 App 里的：**删除照片**（PhotoKit 与系统确认只在 App 内，命令止于 `delete-check`）；暂停/继续自动整理（运行中 App 的状态，持久的“自动整理”开关用 `settings set automatic`）；登录启动；在“照片”中打开、打开“照片”、在 Finder 中显示记录、权限设置链接；导入验收测试图；空格预览、放大、视频播放、网格大小、外观切换的即时效果、快捷键录制与取消任务等界面动作。`settings set` 只接受设置窗口能选出的值，App 运行时会拒绝（运行中的 App 会覆盖外部修改）；`photos` 不保存计划，要核对删除请用 `plan library`。
+
+旧命令名保留为同一流程的别名：`classify-plan`/`title-plan` = `plan classify|title`，`triage`/`ocr-scan` = `plan triage|sensitive`（`--apply` 再对新计划全部写入），`classify-apply`/`title-apply` = `apply <最近同类计划> --select-all`（`--apply` 才写）。旧 CSV 计划已停用；标题只补空标题，截图分桶不再建删除相册。仅命令行才有的工具：`backup`、`ocr-extract`、`shared-list`、`dedup-export`、`reconcile`，产物保存在 `~/Library/Application Support/PhotoDesk/cli/`；其中 `reconcile`（只读对账）、`shared-list`（写共享相册手动清单）、`dedup-export` 支持 `--json`，`backup`、`ocr-extract` 是长任务，只输出文本进度；它们读私有 YAML（`--config` 或 `PHOTOCLI_CONFIG`，默认数据目录的 `cli-config.yaml`，不存在时用中性默认）。显式传 `--config` 时，其中的 `library` 也用于其他命令。个人配置不包含在 App 或公开仓库中。
+
+App 与引擎之间的 JSON 管道（无参数、stdin 输入）是 App 内部契约：失败也以 0 退出，由 App 读取 JSON 里的错误；agent 请用上面的命令。
 
 ## 构建和验证
 
@@ -93,7 +134,7 @@ bash build.sh --no-install    # 仅生成应用
 
 Xcode 选择和图标工厂复用总部现有引擎。构建产物位于 `build/DerivedData/Build/Products/Release/PhotoDesk.app`；本机版本为 Apple Silicon，采用本地签名，未进行 App Store 发布或公证分发。
 
-引擎诊断：`build/engine/photo-engine/photo-engine` 接受 JSON stdin，例如 `{"command":"audit"}`、`{"command":"ocr-probe"}`。只读分析结果可用 `tests/contract_check.swift` 经实际 Swift 模型与解码器验证；原图库写入不得用作无人值守测试数据。
+引擎诊断：`photodesk doctor --ocr --json`；App 内部契约可直接给 `build/engine/photo-engine/photo-engine` 输入 JSON stdin，例如 `{"command":"audit"}`、`{"command":"ocr-probe"}`。只读分析结果可用 `tests/contract_check.swift` 经实际 Swift 模型与解码器验证；原图库写入不得用作无人值守测试数据。
 
 第三方来源：[osxphotos](https://github.com/RhetTbull/osxphotos)、[PyInstaller 打包说明](https://pyinstaller.org/en/stable/usage.html)。osxphotos 0.76.1 包含 macOS 27 初步兼容修复，仍需针对实际系统验证。
 

@@ -57,3 +57,12 @@
 ## 装机复核（2026-09-30 00:05）
 
 - 回读装机 1.0.1 (36)，AppIcon.icns 与当前构建逐字节一致；Chapter check-only 的 install、build-receipt 均 ok，其余项无非 ok，未重装。仅剩本人确认 Dock/Finder 图标。
+
+## Agent CLI：App 功能全部可由 photodesk 驱动（2026-09-30）
+
+- 新增 `backend/desk_cli.py`（命令）与 `backend/preferences.py`（按 App 方式读写 UserDefaults 设置）；`bridge.handle()` 成为 App 管道与命令共用的调度，演示护栏与权限翻译不再只在管道里。新命令：timeline、refresh、audit（改为 App 图库概览口径）、photos、duplicates、plan、plans、plan-show、apply、delete-check、records、progress、settings / settings set、doctor；读命令 `--json` 输出 `{ok,...}`，失败 exit 1。删除仍只在 App 内，命令止于 delete-check；apply 默认预检，`--confirm` 才写，写入加 `locks/apply.lock` 与 App 互斥；timeline 重建加 `journey/<hash>/.lock`。
+- 旧命令 classify-plan/title-plan/triage/ocr-scan/classify-apply/title-apply 改为 plan/apply 的别名，旧的第二套写入实现（覆盖已有标题、截图进删除相册、无回执）已删；backup、ocr-extract、shared-list、dedup-export、reconcile 保留为命令行工具。`lib.editable` 成为唯一个人范围。
+- 顺带修正共用引擎缺陷：共享 Cloud GUID 的副本在标题/分类计划里取错副本（真实库 833 条标题建议中 3 条预检失败，写入会落到已有标题的副本）；现在每行绑定自身 local_uuid，写入按 local_uuid 解析。
+- 验证：`bash scripts/test.sh` 64 项 Python + Swift 控件通过；`bash build.sh --no-install` 与 `scripts/accept/build.py` 构建 1.0.1 (48)（未装机）；functionality 11/11、recovery 11/11、privacy 12/12（真实图库只读审计 passed）。包内 photodesk 读真实数据（时间线 6,393/2,722、概览 4,703 与管道一致、重复 6 组 12 张）；写入类只在沙盒数据目录 + 内核禁写图库下验证（分类 2,804 / 标题 833 行预检通过，changed 0）；settings 与真实 Swift 解码器双向往返。
+- 待办：提交后按原流程 `bash build.sh` 装机（PhotoDesk 需退出）并复跑 cli_entry；公开仓推送、发行与主页部署另行授权。管道 `plan kind=duplicates`（仅 QA 脚本用的指纹版重复计划）未退役。
+- 复核后修正（同日）：`reconcile`、`shared-list`、`dedup-export` 加 `--json`（`backup`、`ocr-extract` 仍为文本进度，README 已写明）；`--json` 下命令开始前的失败（参数错误、演示护栏、数据目录不可写）也在 stdout 输出 `{ok:false}`，数据目录的建目录/收权限改为尽力而为，读命令不再因元数据写失败而失败；`doctor` 的 app_running、photos_automation 改为 `ok: null`（只说明、未验证），另给 `app_running` 布尔字段；跟随系统图库时 `timeline`/`duplicates`/`delete-check --event/--recommended` 总是核对“照片”最近打开的图库，缓存属于别的图库即报错提示 refresh。最近图库由 `preferences.photos_last_library()` 读取（与 osxphotos 同一 plist 与书签解析，单测核对两者一致），不为读缓存加载 osxphotos：timeline 约 1 s / 120 MB，而导入 osxphotos 需约 3 s / 180 MB。`scripts/test.sh` 与验收 fixture 结束时删除各自的隔离偏好 plist；此前遗留的 26 个空测试 plist 已移到 `~/.Trash/photodesk-cli-20260930/Library/Preferences/`。`bash scripts/test.sh` 73 项通过，重建 1.0.1 (48) 未装机，functionality/recovery 11/11、privacy 12/12。
