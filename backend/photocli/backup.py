@@ -1,4 +1,4 @@
-"""backup — P0 安全网。整包冷备(rsync)+ osxphotos sidecar 导出(个人库范围)。
+"""backup — 删除前的安全网：整包冷备(rsync) + osxphotos sidecar 导出(个人库范围)。
 
 注意:整包 rsync 需 Photos.app 退出;sidecar export 用 PhotoKit 需 Photos.app 运行。
 本命令默认只跑 sidecar(可重入增量);整包 rsync 用 --full(需先退出 Photos)。
@@ -24,7 +24,7 @@ def _photos_running() -> bool:
 @click.option("--sidecar/--no-sidecar", default=True, help="是否导出 sidecar(默认是)")
 @click.pass_context
 def backup(ctx: click.Context, dest: str | None, full: bool, sidecar: bool) -> None:
-    """整包冷备 + sidecar 元数据存根(铁律 #5:没备份不进删除)。"""
+    """备份：osxphotos sidecar 元数据导出（默认），--full 另做整包冷备。建议在大批删除前运行。"""
     cfg = load_config(ctx.obj.get("config_path"))
     log = get_logger("backup", cfg)
     today = _dt.date.today().isoformat()

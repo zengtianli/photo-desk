@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import collections
+import fcntl
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import sqlite3
@@ -212,9 +214,24 @@ def duplicates(photos, api, cfg, connection):
     return plan
 
 
+def cache_folder(api, library):
+    """Where a library's timeline index and latest.json live."""
+    return api.ROOT / 'journey' / digest(library)
+
+
 def run(request, cfg, api):
     db = api.load_db(cfg.library)
     cfg.raw['library'] = str(db.library_path)
+    folder = cache_folder(api, cfg.library)
+    folder.mkdir(parents=True, exist_ok=True)
+    # The app's automation and `photodesk refresh` can ask at the same moment; one rebuild per
+    # library at a time, so neither reads a half-written index or interleaves the same .tmp file.
+    with open(os.open(folder / '.lock', os.O_CREAT | os.O_RDWR, 0o600)) as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return _run(request, cfg, api, db, folder)
+
+
+def _run(request, cfg, api, db, folder):
     # osxphotos returns photos in a per-process order (string hash seed), and every later sort is
     # stable, so photos taken in the same second used to swap places on each rebuild. A fixed
     # order keeps the timeline steady and lets an unchanged library produce an identical result.
@@ -225,9 +242,6 @@ def run(request, cfg, api):
     hours = max(1, min(12, int(options.get('event_hours', 3))))
     kilometers = max(1, min(100, int(options.get('event_kilometers', 8))))
     minutes = max(15, min(180, int(options.get('meeting_minutes', 90))))
-    library_key = digest(cfg.library)
-    folder = api.ROOT / 'journey' / library_key
-    folder.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(folder / 'index.sqlite', timeout=30)
     connection.execute('PRAGMA journal_mode=WAL')
     connection.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY,value TEXT NOT NULL)')
@@ -299,7 +313,17 @@ def run(request, cfg, api):
                   albums=len(db.albums), tracks=sorted({t for e in events for t in e['tracks']}))
     result['digest'] = content_digest(result)
     files = [api.plan_path(plan['id']), api.plan_path(duplicate_plan['id']), folder / 'latest.json']
-    if result['digest'] == request.get('previous_digest') and all(f.is_file() for f in files):
+    previous = request.get('previous_digest')
+    if previous == 'saved':
+        # photodesk refresh has no screen to compare with; compare with the stored result instead.
+        try:
+            stored = json.loads(files[-1].read_text())
+        except (OSError, ValueError):
+            stored = {}
+        previous = stored.get('digest')
+        if result['digest'] == previous and all(f.is_file() for f in files):
+            return dict(result, unchanged=True, generated=stored.get('generated', result['generated']))
+    if result['digest'] == previous and all(f.is_file() for f in files):
         # The app already shows exactly this; skip ~13 MB of rewrites and the 9 MB reply.
         return dict(unchanged=True, digest=result['digest'])
     api.write_plan_record(plan)

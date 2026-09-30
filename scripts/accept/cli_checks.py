@@ -13,9 +13,13 @@ import types
 from _common import APP, CLI, ENGINE, ROOT, require
 
 COMMANDS = {
-    "audit", "backup", "classify-plan", "classify-apply", "ocr-scan",
-    "ocr-extract", "shared-list", "dedup-export", "reconcile", "triage",
-    "title-plan", "title-apply",
+    # The app's functions (desk_cli, same engine as the window)
+    "apply", "audit", "delete-check", "doctor", "duplicates", "photos", "plan", "plan-show", "plans",
+    "progress", "records", "refresh", "settings", "timeline",
+    # Old names kept as aliases of plan/apply
+    "classify-plan", "classify-apply", "title-plan", "title-apply", "triage", "ocr-scan",
+    # Command-line-only tools
+    "backup", "ocr-extract", "shared-list", "dedup-export", "reconcile",
 }
 
 
@@ -46,8 +50,8 @@ def functionality(root, env, checks):
     response = cli(["--help"], env)
     require(response.returncode == 0 and "photodesk" in response.stdout, "CLI help failed")
     listed = set(re.findall(r"^  ([a-z][a-z-]*)\s", response.stdout, re.M))
-    require(listed == COMMANDS, "CLI must list exactly the twelve supported commands")
-    checks["cli_twelve_commands_help"] = True
+    require(listed == COMMANDS, "CLI must list exactly the supported commands")
+    checks["cli_lists_every_command"] = True
     info = plistlib.loads((APP / "Contents/Info.plist").read_bytes())
     version = cli(["--version"], env)
     require(version.returncode == 0 and info["CFBundleShortVersionString"] in version.stdout
@@ -61,6 +65,27 @@ def functionality(root, env, checks):
     require(stats["total"] == len(source) == 10 and stats["photos"] + stats["movies"] == 10,
             "CLI audit does not conserve the fixture asset count")
     checks["cli_synthetic_audit_json_counts"] = True
+    # The agent commands build and read the same timeline the window shows (own state folder,
+    # so the app-engine checks that follow start from nothing).
+    agent_env = dict(env, PHOTODESK_DATA_ROOT=str(root / "cli-agent-state"))
+
+    def agent(*arguments, ok=True):
+        result = cli([*arguments, "--json"], agent_env)
+        data = json.loads(result.stdout)
+        require(result.returncode == (0 if ok else 1) and data["ok"] is ok, f"CLI {arguments[0]} result")
+        return data
+
+    built = agent("refresh")
+    view = agent("timeline", "--limit", "0")
+    require(built["total"] == view["total"] == 10 and sum(e["count"] for e in view["events"]) == 10
+            and view["plan_id"] == built["plan_id"], "CLI timeline does not read what refresh built")
+    duplicates = agent("duplicates")
+    require(duplicates["row_count"] == 2 and len(duplicates["recommended"]) == 1,
+            "CLI duplicates differ from the app's duplicate plan")
+    require(agent("photos", "--limit", "0")["total"] == 10, "CLI photo list lost assets")
+    refused = agent("apply", built["plan_id"], "--select-all", "--confirm", ok=False)
+    require("合成演示图库只用于" in refused["error"], "CLI write was not stopped by the engine's demo guard")
+    checks["cli_agent_commands_share_app_timeline"] = True
 
 
 def recovery(root, env, checks):
@@ -141,12 +166,13 @@ def privacy(root, env, checks):
     private_content_scan(checks)
     before = bundle_snapshot()
     state = root / "cli-private-state"
-    result = cli(["audit"], dict(env, PHOTODESK_DATA_ROOT=str(state)))
+    # audit is read-only now; shared-list is the command-line tool that still writes a report.
+    result = cli(["shared-list"], dict(env, PHOTODESK_DATA_ROOT=str(state)))
     require(result.returncode == 0, "CLI report generation failed")
     outputs = state / "cli"
     require(outputs.is_dir() and stat.S_IMODE(outputs.stat().st_mode) == 0o700,
             "CLI output directory must have mode 0700")
-    require(any(outputs.rglob("audit.json")), "CLI report was not saved in the CLI subdirectory")
+    require(any(outputs.rglob("shared-manual-checklist.html")), "CLI report was not saved in the CLI subdirectory")
     require(not (state / "plans").exists(), "CLI output mixed with GUI JSON plans")
     require(bundle_snapshot() == before, "CLI report generation changed the application bundle")
     verify_signature()

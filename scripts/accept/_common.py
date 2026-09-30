@@ -58,7 +58,14 @@ def fixture(name):
                    PHOTODESK_PREFERENCES_SUITE=f"PhotoDesk.Test.Acceptance.{name}.{root.name}")
         for key in ("PHOTOCLI_CONFIG", "PHOTOCLI_DATA_ROOT", "PHOTOCLI_DOCS_DB"):
             env.pop(key, None)
-        yield root, env
+        try:
+            yield root, env
+        finally:
+            # The isolated preferences domain goes with the fixture (an emptied domain still
+            # leaves a plist file behind).
+            suite = env["PHOTODESK_PREFERENCES_SUITE"]
+            subprocess.run(["defaults", "delete", suite], capture_output=True)
+            (Path.home() / f"Library/Preferences/{suite}.plist").unlink(missing_ok=True)
 
 
 def engine(request, env, *, timeout=90):

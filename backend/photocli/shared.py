@@ -8,18 +8,24 @@ from __future__ import annotations
 
 import collections
 import html
-from pathlib import Path
 
 import click
+
+from desk_cli import JSON_HELP, execute
 
 from .lib import load_config, load_db
 
 
 @click.command("shared-list")
+@click.option("--json", "as_json", is_flag=True, help=JSON_HELP)
 @click.pass_context
-def shared_list(ctx: click.Context) -> None:
-    """列共享相册 + 按 fingerprint 找精确重复,出手动清单 HTML。"""
-    cfg = load_config(ctx.obj.get("config_path"))
+def shared_list(ctx: click.Context, as_json: bool) -> None:
+    """列共享相册 + 按 fingerprint 找精确重复，写手动清单 HTML 到 PhotoDesk/cli/reports/。"""
+    execute("shared-list", as_json, lambda: _shared_list(ctx.obj.get("config_path")))
+
+
+def _shared_list(config_path):
+    cfg = load_config(config_path)
     db = load_db(cfg.library)
     shared = [p for p in db.photos() if p.shared]
 
@@ -61,5 +67,7 @@ code{{background:#161b22;padding:2px 6px;border-radius:4px;color:#56d4dd}}</styl
 <h2>精确重复组(同 fingerprint,{len(dup_groups)} 组)</h2>
 {'<table><tr><th>组内张数</th><th>文件</th></tr>' + ''.join(dup_rows) + '</table>' if dup_rows else '<p>未发现精确重复。</p>'}
 </body></html>""")
-    click.echo(f"共享相册 {len(shared)} 张,{len(by_album)} 个相册,精确重复 {len(dup_groups)} 组")
-    click.echo(f"手动清单已写: {out}")
+    payload = dict(shared_photos=len(shared), albums=len(by_album), duplicate_groups=len(dup_groups),
+                   duplicate_photos=sum(len(g) for g in dup_groups.values()), report=str(out))
+    return payload, [f"共享相册 {len(shared)} 张,{len(by_album)} 个相册,精确重复 {len(dup_groups)} 组",
+                     f"手动清单已写: {out}"]

@@ -1,17 +1,15 @@
-"""共享接口层 — 所有子命令(audit/classify/ocr/shared/dedup)都依赖这里。
+"""共享接口层：配置、PhotosDB 加载、个人范围（editable）、保护规则与计划 CSV。
 
-模块 agent 实现 classify.py / ocr.py 时,通过本文件的函数拿 db / 照片 / 配置 / 保护判断,
-不要各自重复 PhotosDB 加载或 scope 逻辑。
+引擎（bridge/journey）和命令行旧工具都通过这里取图库、照片与保护判断，不各自重复加载或范围逻辑。
 """
 from __future__ import annotations
 
 import csv
 import datetime as _dt
 import functools
-import json
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -118,22 +116,22 @@ def load_db(library: str | None = None):
         raise click.ClickException(f"照片库解析失败: {where} ({type(e).__name__})")
 
 
+def editable(photo) -> bool:
+    """Personal, writable items: not in a shared album or the shared library, and no unsaved
+    Shared-with-You items. The app's overview, plans, writes and deletion all use this scope."""
+    return not (photo.shared or getattr(photo, 'shared_library', False)
+                or (getattr(photo, 'syndicated', False) and not getattr(photo, 'saved_to_library', False)))
+
+
 def iter_photos(cfg: Config | None = None, *, scope_personal: bool | None = None) -> list:
-    """按 scope 返回照片列表。personal=只要不在共享相册的(--not-shared 等价)。"""
+    """按 scope 返回照片列表。personal = editable()，与 App 的个人范围一致。"""
     cfg = cfg or load_config()
     db = load_db(cfg.library)
     photos = db.photos()
     personal = cfg.personal_only if scope_personal is None else scope_personal
     if personal:
-        photos = [p for p in photos if not p.shared]
+        photos = [p for p in photos if editable(p)]
     return photos
-
-
-@functools.lru_cache(maxsize=1)
-def cloud_guid_index(library: str | None = None) -> dict[str, Any]:
-    """cloud_guid -> PhotoInfo。跨次操作的稳定映射(铁律 #6)。"""
-    db = load_db(library)
-    return {p.cloud_guid: p for p in db.photos() if p.cloud_guid}
 
 
 # ---------------- 保护规则 ----------------
@@ -173,16 +171,6 @@ def write_plan(rows: Iterable[PlanRow], path: Path) -> int:
         for r in rows:
             w.writerow(r.__dict__)
     return len(rows)
-
-
-def read_plan(path: Path) -> list[PlanRow]:
-    if not path.exists():
-        raise SystemExit(f"❌ plan 文件不存在: {path}")
-    out = []
-    with path.open() as f:
-        for d in csv.DictReader(f):
-            out.append(PlanRow(**d))
-    return out
 
 
 def photo_date(photo) -> str:

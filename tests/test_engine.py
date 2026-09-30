@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 import copy
+import tempfile
 from types import SimpleNamespace as Photo
 import unittest
 from unittest.mock import patch
@@ -93,6 +94,25 @@ class SafetyTests(unittest.TestCase):
             result = bridge.deletion_preview({'plan_id': 'fixture', 'selected': ['0']}, cfg)
         self.assertEqual(result['items'][0]['uuid'], 'uuid')
 
+    def test_writes_target_the_exact_copy_when_copies_share_a_cloud_guid(self):
+        untitled, titled = photo(uuid='untitled'), photo(uuid='titled', title='用户写的标题')
+        plan = {'rows': [row(action='set-title', target='建议标题', local_uuid='untitled', original_title='')]}
+        for photos in ([untitled, titled], [titled, untitled]):
+            _, resolved = bridge.validate_selection(plan, ['0'], photos, cfg)
+            self.assertEqual(resolved['0'].uuid, 'untitled')
+        with self.assertRaisesRegex(ValueError, '无法区分重复副本'):
+            bridge.validate_selection({'rows': [row()]}, ['0'], [untitled, titled], cfg)
+        with self.assertRaisesRegex(ValueError, '标识已变化'):
+            bridge.validate_selection({'rows': [row(local_uuid='untitled', cloud_guid='other')]}, ['0'], [untitled], cfg)
+        for photo_order in ([titled, untitled], [untitled, titled]):
+            db = Photo(photos=lambda order=photo_order: order, library_path='/fake.photoslibrary')
+            with tempfile.TemporaryDirectory() as scratch, patch.object(bridge, 'ROOT', Path(scratch)), \
+                 patch.object(bridge, 'load_db', return_value=db):
+                for p in photo_order:
+                    p.path, p.path_derivatives, p.ismovie, p.place = '', [], False, None
+                plan = bridge.build_plan({'kind': 'title'}, cfg)
+            self.assertEqual([(r['local_uuid'], r['original_title']) for r in plan['rows']], [('untitled', '')])
+
     def test_stale_missing_and_shared_abort(self):
         for photos in ([], [photo(shared=True)], [photo(shared_library=True)]):
             with self.assertRaises(ValueError): bridge.validate_selection({'rows': [row()]}, ['0'], photos, cfg)
@@ -125,7 +145,8 @@ class SafetyTests(unittest.TestCase):
         album.album.add.side_effect = lambda photos: membership.extend(photos)
         album.photos.side_effect = lambda: membership
         receipts = []
-        with patch.object(bridge, 'load_plan', return_value=plan), \
+        with tempfile.TemporaryDirectory() as scratch, patch.object(bridge, 'ROOT', Path(scratch)), \
+             patch.object(bridge, 'load_plan', return_value=plan), \
              patch.object(bridge.lib, 'load_db', return_value=Photo(photos=lambda: [photo()])), \
              patch.object(osxphotos.utils, 'get_last_library_path', return_value='/fake.photoslibrary'), \
              patch.object(photoscript, 'Photo', return_value=live), \
@@ -146,7 +167,8 @@ class SafetyTests(unittest.TestCase):
         plan = {'id': 'fixture', 'library': '/fake.photoslibrary', 'rows': [row()]}
         album = MagicMock(); album.photos.return_value = []
         receipts = []
-        with patch.object(bridge, 'load_plan', return_value=plan), \
+        with tempfile.TemporaryDirectory() as scratch, patch.object(bridge, 'ROOT', Path(scratch)), \
+             patch.object(bridge, 'load_plan', return_value=plan), \
              patch.object(bridge.lib, 'load_db', return_value=Photo(photos=lambda: [photo()])), \
              patch.object(osxphotos.utils, 'get_last_library_path', return_value='/fake.photoslibrary'), \
              patch.object(photoscript, 'Photo', return_value=photo()), \
@@ -155,5 +177,21 @@ class SafetyTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, '写入中止'):
                 bridge.apply_plan({'plan_id': 'fixture', 'selected': ['0'], 'confirmed': True}, cfg)
         self.assertEqual(receipts[-1]['state'], 'partial_or_failed')
+
+    def test_confirmed_writes_exclude_each_other(self):
+        import fcntl
+        with tempfile.TemporaryDirectory() as scratch, patch.object(bridge, 'ROOT', Path(scratch)), \
+             patch.object(bridge, '_apply', return_value={'changed': 1}) as apply:
+            self.assertEqual(bridge.apply_plan({'plan_id': 'x', 'selected': ['0'], 'confirmed': True}, cfg), {'changed': 1})
+            lock = Path(scratch) / 'locks' / 'apply.lock'
+            self.assertEqual(lock.stat().st_mode & 0o777, 0o600)
+            with open(lock, 'a') as held:
+                fcntl.flock(held, fcntl.LOCK_EX)  # another process (the app) is writing
+                with self.assertRaisesRegex(ValueError, '另一项整理写入正在进行'):
+                    bridge.apply_plan({'plan_id': 'x', 'selected': ['0'], 'confirmed': True}, cfg)
+                # The pre-check never waits for or takes the write lock.
+                self.assertEqual(bridge.apply_plan({'plan_id': 'x', 'selected': ['0']}, cfg), {'changed': 1})
+            self.assertEqual(bridge.apply_plan({'plan_id': 'x', 'selected': ['0'], 'confirmed': True}, cfg), {'changed': 1})
+            self.assertEqual(apply.call_count, 3)
 
 if __name__ == '__main__': unittest.main()

@@ -14,5 +14,7 @@ xcrun swiftc \
 
 # The checker uses fake hotkey registration and removes this isolated preference
 # domain on exit. It never launches a window or synthesizes user input.
-PHOTODESK_PREFERENCES_SUITE="PhotoDesk.Test.ProductControls.$(/usr/bin/uuidgen)" \
-  build/accept-product-controls
+suite="PhotoDesk.Test.ProductControls.$(/usr/bin/uuidgen)"
+# removePersistentDomain leaves an empty plist behind; drop it with the domain.
+trap 'defaults delete "$suite" >/dev/null 2>&1 || true; rm -f "$HOME/Library/Preferences/$suite.plist"' EXIT
+PHOTODESK_PREFERENCES_SUITE="$suite" build/accept-product-controls
