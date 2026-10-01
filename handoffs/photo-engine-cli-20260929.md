@@ -74,3 +74,11 @@
 - 发行：`scripts/release.py --reuse-build` 生成 ZIP 37,386,079 B，SHA-256 aa4eb6d8…；推送 main（f9b2d8a）后建 GitHub Release v1.0.1-50（target f9b2d8a，latest）。`gh release create/upload` 上传大文件时本机代理多次 reset 连接（gh 失败时会删掉草稿）；改为先建草稿、`curl --http1.1 --limit-rate 2M` 上传 ZIP、再 `gh release upload` 校验文件并发布。线上资产 digest 与本地一致。
 - 主页：`site/changelog.html` 首条原用 `{{BUILD}}` 套在构建 33 的内容上，36、50 未记；改为固定的 50、36、33 三条。`build_site.py` → `deploy.sh --products-only photo-desk --dry-run` → `--deploy --plan` 单产品部署 17 个文件哈希核验；线上 release.json / facts.json = 50、下载 ZIP 长度与 checksum 回读一致。
 - 未做：perf 阶段的 input-binding / auto-measure 需对已装 50 重新实测（留给统一测量阶段）；页面与卡片资源数字仍是 36 的实测。`perf/acceptance/`、`perf/build-receipt.json`、`perf/delivery-evidence.json` 含本机路径与真实图库计数，公开仓不提交，仍由 Chapter 在工作树维护。
+
+## 演示素材沿用到 1.0.1 (50)（2026-10-01 14:45）
+
+- Chapter media 项原为 stale（录像 09-10 之后界面源码改过 4 次：19f7b73 图标、32a3ad8 后台图库变化检测、e809a8d 离屏自检入口、6af660d 请求带猫名）。录制方式依赖前台窗口操作，不是离屏安全的，所以没有重录，改为离屏对照后标注沿用。
+- 对照入口：`uv run python scripts/media_reuse_check.py label=/path/PhotoDesk.app …`。录制版本 build 10 没有自检入口，做法是在独立克隆里取录像源码 ef19e90、加入 e809a8d 的 Swift 自检改动、用当前 Xcode 27.0 构建，再把可执行文件放进 build 10 原包副本（保留 build 10 引擎），ad-hoc 重签后参与对照；36、50 直接用 `dist/` 发行包。
+- 结果：三个包各跑两次 `--ui-self-test`，5 张离屏截图（时间线、选中片段、预览、片段详情、设置）6 次全部逐字节相同，并与 `perf/acceptance/native_ui.json` 一致；三个引擎在合成图库上按 App 默认开内容识别跑 snapshot→enrich，事件（Design review meeting（文字线索）3、猫咪的日常 3、生活片段 4）、计划与重复行（2 行 1 项预选）完全相同，与录像画面一致。36 与 50 的可执行 Mach-O UUID 相同，只差签名里的 64 字节。
+- 记录：`docs/demo/recording.json` 的 `reused_for["1.0.1 (50)"]`。随后 `chapter sop accept --check media_playback` 通过（线上页 2 个视频无界面浏览器实际播放），`chapter sop run --app photo-desk --check-only --retry` 为 current_passed / complete，18 项全部 ok。素材文件未变，线上页已写明 build 50 沿用录像，未重新部署。
+- 下次界面源码再变：对新发行包跑同一脚本（与 `dist/PhotoDesk-1.0.1-36-arm64` 或上次对照的包比），截图或引擎结果有差异就重录受影响场景。
