@@ -1,5 +1,7 @@
 # PhotoDesk
 
+The Mac app menu includes **Configuration and updates…** and **Check for updates…**. Export/import organization rules, display preferences and shortcuts, or enable optional iCloud settings sync, off by default. With iCloud Drive and sync enabled on two Macs using the same Apple account, a new Mac restores existing preferences. Restores create backups and reject damaged files. Photos, library paths, recognition caches, login items and permissions stay on each device. Update checks read published releases from the existing public repository.
+
 [中文](README.md) | **English**
 
 A native macOS photo timeline. On launch it automatically scans the entire library, connects everyday life, cats, people, meetings, and documents, and prepares duplicate-photo cleanup suggestions.

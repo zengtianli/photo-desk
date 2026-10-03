@@ -257,6 +257,15 @@ final class PhotoShortcuts: ObservableObject {
     }
 
     func binding(_ action: PhotoAction) -> PhotoBinding? { bindings[action.rawValue] }
+    func reload() {
+        let restored: [String: PhotoBinding]
+        if let data = defaults.data(forKey: Self.storageKey) {
+            guard let value = try? JSONDecoder().decode([String: PhotoBinding].self, from: data) else { errors["load"] = "快捷键配置无法读取，原绑定保留。"; return }
+            restored = value
+        } else { restored = Self.defaultBindings }
+        guard restored != bindings else { return }
+        suspend(); bindings = restored; errors = [:]; resume()
+    }
     func status(_ action: PhotoAction) -> String {
         if let error = errors[action.rawValue] { return error }
         guard let b = binding(action) else { return "未设置" }

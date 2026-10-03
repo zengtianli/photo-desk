@@ -88,10 +88,22 @@ enum PhotoDeskEntry {
 struct PhotoDeskApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model: PhotoDeskModel
+    private let configuration: AppConfiguration?
 
     init() {
         let model = PhotoDeskModel()
         _model = StateObject(wrappedValue: model)
+        if !PhotoDeskLaunch.background && ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] == nil {
+            let config = AppConfiguration(productID: "cyou.tianli.PhotoDesk", defaultsKeys: ["product.preferences.v1", "shortcuts.v1"], defaults: PhotoPreferences.defaults)
+            config.onChange = { [weak model] in
+                guard let model else { return }
+                let restored = PhotoPreferences.load()
+                if restored != model.preferences { model.preferences = restored }
+                model.shortcuts.reload()
+            }
+            configuration = config
+            AppLifecycleUI.install(name: "PhotoDesk", configuration: config, updateSource: .github(repository: "zengtianli/photo-desk"))
+        } else { configuration = nil }
         if PhotoDeskLaunch.background { delegate.model = model }
     }
 
@@ -106,6 +118,8 @@ struct PhotoDeskApp: App {
             .commands {
                 CommandGroup(replacing: .appSettings) {
                     SettingsLink { Text("设置…") }.keyboardShortcut(",")
+                    Button("配置与更新…") { AppLifecycleUI.shared.show() }
+                    Button("检查更新…") { AppLifecycleUI.shared.checkForUpdates() }
                 }
                 CommandMenu("照片") {
                     Button("快速预览所选照片") { model.togglePreview() }.disabled(!model.canPreview && model.enlargedPhoto == nil)
