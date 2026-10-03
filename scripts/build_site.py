@@ -21,7 +21,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def build(preview=False, output=None):
+def build(preview=False, output=None, keep_history=False):
     source, output = ROOT / 'site', Path(output) if output else ROOT / 'build/site'
     manifest_file = ROOT / 'dist/release.json'
     if manifest_file.is_file():
@@ -40,6 +40,11 @@ def build(preview=False, output=None):
     media_root = ROOT / 'docs/demo'
     evidence_file = media_root / 'evidence.json'
     evidence = json.loads(evidence_file.read_text()) if evidence_file.is_file() else {}
+    recording = json.loads((media_root / 'recording.json').read_text()).get('recording', {}) if (media_root / 'recording.json').is_file() else {}
+    measured = json.loads((ROOT / 'perf/lightweight.json').read_text()) if release['bytes'] else {}
+    history_notice = (f"历史参考、不代表新版新测。当前下载为 PhotoDesk {release['version']}（{release['build']}）；"
+                      f"截图与录像来自 {evidence.get('recorded_version')}（{evidence.get('recorded_build')}，{recording.get('recorded_at', '日期未记载')}），"
+                      f"性能来自 {measured.get('version')}（{measured.get('measured_at')}）。新版配置与更新窗口未在旧素材中展示。")
     public_media_caption = '真实录像尚未采集，本页只供版式预览。'
     if evidence.get('privacy_reviewed') is True:
         public_media_caption = (
@@ -51,7 +56,7 @@ def build(preview=False, output=None):
     if not preview:
         if not (evidence.get('privacy_reviewed') is True and evidence.get('synthetic_inputs') is True):
             raise SystemExit('Real recordings and privacy review are required; preview placeholders cannot be published.')
-        if evidence.get('recorded_version') != release['version']:
+        if evidence.get('recorded_version') != release['version'] and not keep_history:
             raise SystemExit('The real media version differs from the release; inspect and recapture affected scenes.')
         expected = {f['path']: f['sha256'] for f in evidence.get('files', [])}
         for name in MEDIA:
@@ -65,6 +70,10 @@ def build(preview=False, output=None):
                 streams = json.loads(result.stdout).get('streams', [])
                 if not streams or streams[0].get('codec_name') != 'h264' or float(streams[0].get('duration', 0)) <= 0:
                     raise SystemExit(f'Media is not a playable H.264 recording: {name}')
+        if keep_history:
+            if not recording.get('recorded_at') or recording.get('source') != 'real-app-window':
+                raise SystemExit('Historical media needs its actual recording date and source.')
+            public_media_caption += ' ' + history_notice
     if output.exists():
         shutil.rmtree(output)  # Generated site only; not source, raw media or release archive.
     (output / 'images').mkdir(parents=True)
@@ -90,7 +99,7 @@ def build(preview=False, output=None):
         return f'<video controls playsinline preload="metadata" poster="{assets[poster]}"><source src="{assets[name]}" type="video/mp4">请下载视频后播放。</video>'
     values = {'VERSION': release['version'], 'BUILD': str(release['build']),
               'SIZE': perf_block.size_mb(release['bytes']) if release['bytes'] else '体积待发行构建',
-              'LIGHT': perf_block.standalone_section(ROOT / 'perf/lightweight.json', release['version'], '#26796f') if release['bytes'] else '',
+              'LIGHT': perf_block.standalone_section(ROOT / 'perf/lightweight.json', measured['version'].split(' ')[0] if keep_history else release['version'], '#26796f') if release['bytes'] else '',
               'MIN_MACOS': release['minimum_macos'], 'FILENAME': release['filename'], 'SHA256': release['sha256'],
               'DOWNLOAD_URL': 'downloads/' + release['filename'] if manifest_file.is_file() else '#download',
               'TIMELINE_IMAGE': image('timeline.png', 'PhotoDesk 我的时间线原生窗口，合成样例按拍摄时间和已有相册归集'),
@@ -98,6 +107,9 @@ def build(preview=False, output=None):
               'TIMELINE_VIDEO': video('timeline.mp4', 'timeline-poster.jpg'),
               'REVIEW_VIDEO': video('review.mp4', 'review-poster.jpg'),
               'MEDIA_CAPTION': html.escape(public_media_caption)}
+    if keep_history:
+        values['LIGHT'] = '<p class="wrap" role="note">' + html.escape(history_notice) + '</p>' + values['LIGHT']
+        values['LIGHT'] = values['LIGHT'].replace('数字来自所列设备实测，版本更新后重新测量。', '数字来自上述旧版本原始实测，本次仅作历史参考。')
     for path in sorted(source.iterdir()):
         if path.suffix not in ('.html', '.css'):
             continue
@@ -110,6 +122,8 @@ def build(preview=False, output=None):
             raise SystemExit(f'Unresolved placeholder in {path.name}')
         if preview and path.suffix == '.html':
             text = text.replace('<body>', '<body><div class="preview-banner">本地预览 · 未完成真实媒体与发布验收，不可作为正式官网发布</div>', 1)
+        elif keep_history and path.suffix == '.html':
+            text = text.replace('<body>', '<body><aside role="note" style="padding:16px 24px;background:#fff3d6;color:#493919;border-bottom:1px solid #dec493">' + html.escape(history_notice) + '</aside>', 1)
         (output / path.name).write_text(text)
     if manifest_file.is_file():
         # Source commit is public-safe, but never expose local source paths or staging locations.
@@ -117,7 +131,13 @@ def build(preview=False, output=None):
         (output / 'release.json').write_text(json.dumps(public, indent=2) + '\n')
         shutil.copyfile(archive, output / 'downloads' / archive.name)
         shutil.copyfile(ROOT / 'dist' / (archive.name + '.sha256'), output / 'downloads' / (archive.name + '.sha256'))
-        product_facts.write(output, product_facts.from_repo(ROOT, product_id='photo-desk', icon='images/app-icon.png'))
+        facts = product_facts.from_repo(ROOT, product_id='photo-desk', icon='images/app-icon.png')
+        if keep_history:
+            facts.update(download_bytes=release['bytes'], measured_version=measured['version'], historical_reference=True,
+                         download_source='release.json', not_covered=['新版配置与更新窗口', '新版运行性能'])
+            facts['card_line'] = f"当前下载 {perf_block.size_mb(release['bytes'])} · 历史实测 {html.escape(measured['version'])}（{html.escape(measured['measured_at'])}）：" + facts['card_line']
+            facts['card_text'] = product_facts.card_text(facts['card_line'])
+        product_facts.write(output, facts)
     notices = ROOT / 'build/THIRD_PARTY_NOTICES.txt'
     if notices.exists():
         shutil.copyfile(notices, output / 'third-party-notices.txt')
@@ -127,6 +147,10 @@ def build(preview=False, output=None):
                 'preview': preview, 'version': release['version'], 'files': [
                     {'path': p.relative_to(output).as_posix(), 'sha256': digest(p), 'bytes': p.stat().st_size}
                     for p in sorted(output.rglob('*')) if p.is_file()]}
+    if keep_history:
+        manifest.update(historical_reference=True, measured_version=measured['version'], measured_at=measured['measured_at'],
+                        recorded_version=f"{evidence['recorded_version']} ({evidence['recorded_build']})",
+                        recorded_at=recording['recorded_at'], not_covered=['新版配置与更新窗口', '新版运行性能'])
     (output / 'site-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
     print(f'{"Preview" if preview else "Release site"}: {output}; {len(manifest["files"])} public files.')
 
@@ -134,6 +158,9 @@ def build(preview=False, output=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--preview', action='store_true')
+    parser.add_argument('--keep-history', action='store_true', help='Retain reviewed historical media and performance, labelled with their original versions/dates')
     parser.add_argument('--out', type=Path, default=ROOT / 'build/site', help='Site package root (default build/site)')
     args = parser.parse_args()
-    build(args.preview, args.out)
+    if args.preview and args.keep_history:
+        parser.error('--keep-history is for an actual release, not --preview')
+    build(args.preview, args.out, args.keep_history)
