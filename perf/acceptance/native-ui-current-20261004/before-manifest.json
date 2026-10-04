@@ -1,0 +1,64 @@
+{
+  "status": "preserved-before-original-native-ui-job-not-started",
+  "recorded_at": "2026-10-04T09:36:43.218473+08:00",
+  "previous_originals": [
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native_ui.json",
+      "copy": "previous/native_ui.json",
+      "sha256": "5deb8f21e1b736954fbc84d5c2a6b99c515ae066ca3459d032f3314b9a64e255",
+      "bytes": 3099
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native_ui.log",
+      "copy": "previous/native_ui.log",
+      "sha256": "3be2ed618944eab284ef40fa4801feeeb80adf5cd5528c2291c778a668e8e0bb",
+      "bytes": 1996
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native_ui.detail.json",
+      "copy": "previous/native_ui.detail.json",
+      "sha256": "2893a29aafec76eeee83daabc60c7e6f073c474fd400d5b04ffe58bf52a7388e",
+      "bytes": 2310
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/fragment.png",
+      "copy": "previous/native-ui/fragment.png",
+      "sha256": "37cb7c2a59d4dd9f2cdc186981256dd2810b90b33e98c663064f697bd2007b39",
+      "bytes": 127966
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/preview.png",
+      "copy": "previous/native-ui/preview.png",
+      "sha256": "b84218a7492706351e5494ce385c70fb4dbb73fd514da866dc76f2eb527e756f",
+      "bytes": 74170
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/selection.png",
+      "copy": "previous/native-ui/selection.png",
+      "sha256": "310f8460c48378167d1a5b323a16d2e3289856e37439ee95a29dbb5b424e9e19",
+      "bytes": 148815
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/settings.png",
+      "copy": "previous/native-ui/settings.png",
+      "sha256": "eb3b9f377e891c002a5a08cda725560c234fca32dbf9d6f64a896e3596c2bee5",
+      "bytes": 46753
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/timeline.png",
+      "copy": "previous/native-ui/timeline.png",
+      "sha256": "75d3a6ffdf590445df16ff92d06214df20b6a328412574848031068ad9adc662",
+      "bytes": 145646
+    },
+    {
+      "original": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/ui-self-test.json",
+      "copy": "previous/native-ui/ui-self-test.json",
+      "sha256": "511d42f77cca42b89aebd0fdd4285b6221a58056b619cdafdd6aa48773be37af",
+      "bytes": 1390
+    }
+  ],
+  "current_build_receipt_sha256": "14f100a931ed0c5bc6e78ff8e517939cc46263d250e08f42f81dd61ccc63d317",
+  "actual_app_starts": 0,
+  "sdk_builds": 0,
+  "note": "Old bytes and old captured times are retained; no new PASS."
+}

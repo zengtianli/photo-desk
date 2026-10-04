@@ -1,0 +1,110 @@
+{
+  "recorded_at": "2026-10-04T09:49:08.298464+08:00",
+  "job_id": "90c884da1a884ab9b91861435c8b2c1a",
+  "files": {
+    "job-original.log": {
+      "bytes": 327,
+      "sha256": "301f0a63d78aecbb7aace760055e0dd59beeda68b935473e8e928a5fbb2cca18"
+    },
+    "job-current-original.json": {
+      "bytes": 491,
+      "sha256": "7f1a505bb4c17082b0f00cbd1677256de8cacdb8b4397274e22008c36ace23df"
+    },
+    "before-consumer.json": {
+      "bytes": 2849,
+      "sha256": "b288f742ac51f6830b4f856389dde46a618ecb0fb53d1113555c10bf6574a604"
+    },
+    "after-consumer-proof.json": {
+      "bytes": 11726,
+      "sha256": "1762149e62d2876b28741f7e3cd9d6d2f43e4c9e24789e2e11021f7df98b358f"
+    },
+    "before-manifest.json": {
+      "bytes": 2659,
+      "sha256": "d2238bac2c7eb7cd672d16eade4d15d34a70f2c3017570e16c2460dc384a76c8"
+    },
+    "before-build-receipt.json": {
+      "bytes": 5023,
+      "sha256": "14f100a931ed0c5bc6e78ff8e517939cc46263d250e08f42f81dd61ccc63d317"
+    },
+    "previous/native_ui.log": {
+      "bytes": 1996,
+      "sha256": "3be2ed618944eab284ef40fa4801feeeb80adf5cd5528c2291c778a668e8e0bb"
+    },
+    "previous/native_ui.detail.json": {
+      "bytes": 2310,
+      "sha256": "2893a29aafec76eeee83daabc60c7e6f073c474fd400d5b04ffe58bf52a7388e"
+    },
+    "previous/native_ui.json": {
+      "bytes": 3099,
+      "sha256": "5deb8f21e1b736954fbc84d5c2a6b99c515ae066ca3459d032f3314b9a64e255"
+    },
+    "current/native_ui.log": {
+      "bytes": 1996,
+      "sha256": "f6bd543c17cf1a5fdfc26eb6d8c65486253c90d15226a30d93653cd29b7f9115"
+    },
+    "current/native_ui.detail.json": {
+      "bytes": 2310,
+      "sha256": "029e7fab1836f1665c32126f2f5523203fd890b7b0d61e8edec76ff976d4c5d4"
+    },
+    "current/delivery-evidence.json": {
+      "bytes": 6490,
+      "sha256": "dd9af4a1fbe16d38066fb126c08ad613c97f22ad4c25f26795aa520aef5342d1"
+    },
+    "current/build-receipt-original.json": {
+      "bytes": 5023,
+      "sha256": "14f100a931ed0c5bc6e78ff8e517939cc46263d250e08f42f81dd61ccc63d317"
+    },
+    "current/native_ui.json": {
+      "bytes": 3308,
+      "sha256": "4cbf0879850c8886d2a5d3605cdd862b68b14d36cd219bf411d3c0c942cd7fa8"
+    },
+    "previous/native-ui/preview.png": {
+      "bytes": 74170,
+      "sha256": "b84218a7492706351e5494ce385c70fb4dbb73fd514da866dc76f2eb527e756f"
+    },
+    "previous/native-ui/selection.png": {
+      "bytes": 148815,
+      "sha256": "310f8460c48378167d1a5b323a16d2e3289856e37439ee95a29dbb5b424e9e19"
+    },
+    "previous/native-ui/settings.png": {
+      "bytes": 46753,
+      "sha256": "eb3b9f377e891c002a5a08cda725560c234fca32dbf9d6f64a896e3596c2bee5"
+    },
+    "previous/native-ui/ui-self-test.json": {
+      "bytes": 1390,
+      "sha256": "511d42f77cca42b89aebd0fdd4285b6221a58056b619cdafdd6aa48773be37af"
+    },
+    "previous/native-ui/fragment.png": {
+      "bytes": 127966,
+      "sha256": "37cb7c2a59d4dd9f2cdc186981256dd2810b90b33e98c663064f697bd2007b39"
+    },
+    "previous/native-ui/timeline.png": {
+      "bytes": 145646,
+      "sha256": "75d3a6ffdf590445df16ff92d06214df20b6a328412574848031068ad9adc662"
+    },
+    "current/native-ui/preview.png": {
+      "bytes": 74170,
+      "sha256": "b84218a7492706351e5494ce385c70fb4dbb73fd514da866dc76f2eb527e756f"
+    },
+    "current/native-ui/selection.png": {
+      "bytes": 148815,
+      "sha256": "310f8460c48378167d1a5b323a16d2e3289856e37439ee95a29dbb5b424e9e19"
+    },
+    "current/native-ui/settings.png": {
+      "bytes": 46753,
+      "sha256": "eb3b9f377e891c002a5a08cda725560c234fca32dbf9d6f64a896e3596c2bee5"
+    },
+    "current/native-ui/ui-self-test.json": {
+      "bytes": 1390,
+      "sha256": "511d42f77cca42b89aebd0fdd4285b6221a58056b619cdafdd6aa48773be37af"
+    },
+    "current/native-ui/fragment.png": {
+      "bytes": 127966,
+      "sha256": "37cb7c2a59d4dd9f2cdc186981256dd2810b90b33e98c663064f697bd2007b39"
+    },
+    "current/native-ui/timeline.png": {
+      "bytes": 145646,
+      "sha256": "75d3a6ffdf590445df16ff92d06214df20b6a328412574848031068ad9adc662"
+    }
+  }
+}

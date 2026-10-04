@@ -1,0 +1,15 @@
+{
+  "id": "90c884da1a884ab9b91861435c8b2c1a",
+  "app_id": "photo-desk",
+  "action": "accept",
+  "stage": null,
+  "status": "succeeded",
+  "created_at": "2026-10-04T09:46:11+08:00",
+  "started_at": "2026-10-04T09:46:14+08:00",
+  "finished_at": "2026-10-04T09:46:19+08:00",
+  "log_path": "/Users/tianli/Library/Application Support/app-sop/workbench/logs/90c884da1a884ab9b91861435c8b2c1a.log",
+  "message": "验收通过",
+  "check": "native_ui",
+  "retry": false,
+  "tmpdir": "/private/tmp"
+}

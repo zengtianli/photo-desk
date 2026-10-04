@@ -1,0 +1,230 @@
+{
+  "recorded_at": "2026-10-04T09:49:08.298464+08:00",
+  "job_id": "90c884da1a884ab9b91861435c8b2c1a",
+  "original_job": {
+    "id": "90c884da1a884ab9b91861435c8b2c1a",
+    "app_id": "photo-desk",
+    "action": "accept",
+    "stage": null,
+    "status": "succeeded",
+    "created_at": "2026-10-04T09:46:11+08:00",
+    "started_at": "2026-10-04T09:46:14+08:00",
+    "finished_at": "2026-10-04T09:46:19+08:00",
+    "log_path": "/Users/tianli/Library/Application Support/app-sop/workbench/logs/90c884da1a884ab9b91861435c8b2c1a.log",
+    "message": "验收通过",
+    "check": "native_ui",
+    "retry": false,
+    "tmpdir": "/private/tmp"
+  },
+  "original_entry": {
+    "result": "passed",
+    "scope": "ui",
+    "method": "ui_automation",
+    "checked_at": "2026-10-04T09:46:19.428156+08:00",
+    "input_sha256": "0a81f232c21592f5a711948763e670e0b0434933ce2c695510de40c7acf7cae3",
+    "evidence": "perf/acceptance/native_ui.json",
+    "evidence_sha256": "4cbf0879850c8886d2a5d3605cdd862b68b14d36cd219bf411d3c0c942cd7fa8",
+    "detail": "sop.accept：uv run python scripts/accept/native_ui.py → 真实 SwiftUI 离屏渲染及模型动作通过：时间线选择、片段计数、预览关闭、设置自动保存与刷新。"
+  },
+  "native_ui_current": true,
+  "current_inputs": {
+    "stages": {
+      "test": "c942d0cf5f396df7df807c94b806c2d8614b0e1e3e9408d9d9993c78bed90381",
+      "perf": "06d7a0fc8371178f080c66ee992c4c34420b72b7fd628d529e5bd7492e261aa2",
+      "media": "d314e96462e634e48a44d26602cc96c47b1c8332dad6ad01f4061c0108aa091c",
+      "promo": "76456b42bf2f7a63cec0dc2124b2b4ad547ddf1825aaeb505ddf823ffde236e0",
+      "ship": "365590fb7dc0677d02a5f6801514a51408bd50c5217ad0ac61cfcfc8a5a0d9d6"
+    },
+    "bindings": {
+      "business": "33cd1cbb5f26e5d6f024adb0c956a37a8bf945b03268327432755ca0be96c0fb",
+      "code": "64de29468963ac8617fee6412f42c8328f1503cdc85c82f7dbaea84dd92c1d79",
+      "ui": "0a81f232c21592f5a711948763e670e0b0434933ce2c695510de40c7acf7cae3",
+      "promo_ui": "53a86e3bab8bfc696a594572be4b4ab5c22c4e415b5e98d74785bf46c5dbace2",
+      "media": "34e250ffc1fd5b3da3784b1573ad32ad111b7f6b53c83da0256ec6c7ba0e0835",
+      "icon": "e5863d1bc4dd44679716caf1b3cfe3c7a90c2ea36d55f64b8c70b1a352aef85e",
+      "installed_icon": "2df2318cd2fe80dc4504d4f1e3f7d4e3cc3b6af83934ec99cf3af22286616f36",
+      "cli_entry": "7b4f2e608521341d05ae42f632b9ab9864ca2c37705ff6b552dc72706a435c35"
+    },
+    "icon_inputs": {
+      "png": {
+        "path": "/Users/tianli/Apps/photo-desk/icon/AppIcon.png",
+        "sha256": "7c4e5bd69db21fe98c4933958351b62e8a7df5236d2c22970197b70c65c81b08"
+      },
+      "icns": {
+        "path": "/Users/tianli/Apps/photo-desk/icon/AppIcon.icns",
+        "sha256": "46ed4a2f298b9fccf159b99f333c49c5ffc68efaef9e509f2ca5b7bed36f8735"
+      },
+      "provenance": {
+        "path": "/Users/tianli/Apps/photo-desk/icon/provenance.json",
+        "sha256": "a08e98a27b702f83f36a1f05dc8c081c463ecef0306009d13ce668c3eacc1de3"
+      }
+    },
+    "installed_icon_inputs": {
+      "/Applications/PhotoDesk.app/Contents/Resources/AppIcon.icns": "ef8e840ac927d4037fe8ada5e8652146b8ce1019c7d609eb49aa33f73e9a755c"
+    },
+    "product_policy_sha256": "9e67da755a64208863bb02747e11bc65002304222149a75bfbe83331973a1696",
+    "product_naming_sha256": "758480fe2dce5522c5a67d194b53fbb7a90c2e1f2eccf0aec3f7df09bad8216b",
+    "icon_complete": true,
+    "installed_icon_matches": true,
+    "components": {
+      "business": "33cd1cbb5f26e5d6f024adb0c956a37a8bf945b03268327432755ca0be96c0fb",
+      "code": "64de29468963ac8617fee6412f42c8328f1503cdc85c82f7dbaea84dd92c1d79",
+      "perf": "84bd37dd36e4290b408c32eb4ec3952c94ee7f018c17996912c3df73923ccea6",
+      "ui": "1194ea9e12367f4a72eaccd4ca9c6b17bdefd267f17ef2eca00dc16716d6b169",
+      "media": "016446cd06bac3c3509e5ad922699db07cd0b225eae6136b25c62890cc5fe8f2"
+    }
+  },
+  "current_source": {
+    "input_globs": [
+      "Sources/**",
+      "backend/**/*.py",
+      "backend/defaults.yaml",
+      "Info.plist",
+      "PhotoDesk.xcodeproj/**",
+      "build.sh",
+      "scripts/build_engine.sh",
+      "scripts/install_app.py",
+      "scripts/collect_notices.py",
+      "scripts/compress_icon.py",
+      "scripts/strip_release.py",
+      "pyproject.toml",
+      "uv.lock",
+      "icon/AppIcon.icns"
+    ],
+    "sha256": "8ac07da67bcc18bd84ce7bee44f8e58c42861c3e5256b0b4f4d3042d3286a565",
+    "file_count": 37,
+    "files": {
+      "Sources/BackendClient.swift": "13d2d9e274b5306b170485bd8c33e6a0875d1d4b84c1deeb74e3e945a72a0ed0",
+      "Sources/ViewModel.swift": "acd7a71e667fa6155beecce5edddabeedcc66cc15469f00559c054a602a4814f",
+      "Sources/ProductControls.swift": "e3c73a8ad1fda76470edea71d327bdc6b1ea3ed23ae7d2f71b209e39e135431b",
+      "Sources/Shared/AppConfiguration.swift": "66d1b04072dbcbcbbc556afb79be1181396fc8bd1a6940d5960adea742219edc",
+      "Sources/Shared/AppLifecycleUI.swift": "c5bfb42bb97555125d3822a98ab0bab71adf368f0de1439f170f0dddb7456974",
+      "Sources/Shared/AppLifecycle.swift": "07adaba8327f855b9a497346384ece9f8a526089c1c2f987b8873ab95a4fec3c",
+      "Sources/Models.swift": "e048250c83368a837a3af144e1c3c23d22ce598a913982187b8695c503b5cafe",
+      "Sources/PhotoDeskApp.swift": "b7210bd050ce5515f25c98606690a751d3c28b816412126ac5ea43d83293fc9f",
+      "Sources/UISelfTest.swift": "4905172e08aaf144d4b8285138935ebf34783e0f9f35b54893331eaf0888a86f",
+      "Sources/ContentView.swift": "8169db0ac0ffe52a5ad67bc776e438c08fdb5a182feef6318ac7739d35b8918d",
+      "backend/bridge.py": "74004132eccef12c11483508f71d5ab84c5ad46b59420e21f7b392080c7a7c16",
+      "backend/preferences.py": "701bb9f95242131a4aa2f19f7ec38f49e8cce032f0f1c27554b565c320e9c03d",
+      "backend/journey.py": "c218d3545d275f65dae12026d0f22ede7a2a091f6076f7ec694227e071ce9f1d",
+      "backend/demo.py": "903d18c854132489badf7646f01d565d335924afb9c45d9e902d7ed9a03fa1fd",
+      "backend/desk_cli.py": "aeee937be088eb6eb61492517abe7dccaa9546bcda334ec7c9c5ab4d1d046360",
+      "backend/photocli/backup.py": "ffcfe84db2ea5dc82c9ffb0c74675211317aabd2664f446a850fd65e48f0fad4",
+      "backend/photocli/lib.py": "229c998a83ce9b92793dc842305cc76c506710bfd4e0902c8d55d1ab4118c95e",
+      "backend/photocli/classify.py": "22d3e76d05e9ddeb988a64e9c1aa8232fc42915f42e853a18a9d6000fde868fe",
+      "backend/photocli/__init__.py": "5f2ecaac9663aae3ddfc2b973e4bb761d99c3892db0da6d9f2246133a5dd6db7",
+      "backend/photocli/shared.py": "fe2c6eaec23bf5a2532b9a1e4bb8201efe71038a05303e0b0c952ead95b7e6b7",
+      "backend/photocli/ocr.py": "b73bd7442b0623d7934be633c356e594867f6038eb69e66a7f0b26ae46195e2d",
+      "backend/photocli/triage.py": "c5f434b956baf5099ba8cb4f62a1a92ea0597dfc6585fab8031d581e1c5f7ab6",
+      "backend/photocli/cli.py": "d405f068ab52d2d898e41ab0a0367035ca21a8a5d2e23f8fb1649cb4dcc8b307",
+      "backend/photocli/dedup.py": "5b65354a96090715991d50520ba60b228d9c813dd4f569b20810d5e966877502",
+      "backend/photocli/title.py": "485f1825ce39ffb916cf7587d75934b5503f5b8f202857814c26ae56442a51e9",
+      "backend/defaults.yaml": "5d97d0c762b0769be294d25fddbaf669ed10e994929fc72fa0034b6a8dff8617",
+      "Info.plist": "2dfb42c1c25c063e6566c68041ce356213de2a6f4c1add4ec9136dd172d2669c",
+      "PhotoDesk.xcodeproj/project.pbxproj": "91ff6c410d303cbe3520a8f0dd907ebf74fe4b94119d5d47d7991f5c1921d481",
+      "build.sh": "131356eff44c1c6c2f7becb01692eeec1509ece0e6797211eb20a9f4876da333",
+      "scripts/build_engine.sh": "7305431e4eca0ba936b8d5d6e7bd262cee35ba0150b2cb41f7bfa1b71e1970ad",
+      "scripts/install_app.py": "be523e45439cf3c96f61969ac76adc576cfda990c478dfb506d6c13fee2817d8",
+      "scripts/collect_notices.py": "535371c20fc2d723c0a349f4b306816f852e94f564c1138b5a3881232a8485a5",
+      "scripts/compress_icon.py": "b334fe04d3a819d545f88fd344e8f5a0f943370a1d32e401cce0ef56aabd073a",
+      "scripts/strip_release.py": "64edc7bb90038559a2daba99fd4a5445b81e5f2e0d764209154965c4e529815d",
+      "pyproject.toml": "ed4b987f8a00e4d4fd92f6071e9da010447909924dc2c466256ab818b65cc2b8",
+      "uv.lock": "5922865bbbc6cfaa452e189c1ce9bd6dcc307273cc66cd07e8f67f4bc28e82ac",
+      "icon/AppIcon.icns": "46ed4a2f298b9fccf159b99f333c49c5ffc68efaef9e509f2ca5b7bed36f8735"
+    },
+    "commit": "93b411b4d7fdd600b21e1b1529838b50bf2ce150",
+    "dirty_scope": "组件当前 Git 工作树；跨仓/软链输入的实际内容由 sha256 核验",
+    "dirty": false
+  },
+  "actual_artifact": {
+    "bundle_id": "cyou.tianli.PhotoDesk",
+    "version": "1.0.2",
+    "build": "56",
+    "executable": "Contents/MacOS/PhotoDesk",
+    "sha256": "bb56e3b2d39a523077b1938279718f88b8e5a2bd5c30d7e2b70cab9bbd828956",
+    "icon": {
+      "path": "Contents/Resources/AppIcon.icns",
+      "sha256": "ef8e840ac927d4037fe8ada5e8652146b8ce1019c7d609eb49aa33f73e9a755c"
+    }
+  },
+  "original_receipt_verification": [
+    true,
+    "装机可执行文件、图标与当前构建输入均匹配 receipt"
+  ],
+  "actual_outputs": [
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native_ui.json",
+      "saved": "current/native_ui.json",
+      "bytes": 3308,
+      "sha256": "4cbf0879850c8886d2a5d3605cdd862b68b14d36cd219bf411d3c0c942cd7fa8"
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native_ui.log",
+      "saved": "current/native_ui.log",
+      "bytes": 1996,
+      "sha256": "f6bd543c17cf1a5fdfc26eb6d8c65486253c90d15226a30d93653cd29b7f9115"
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native_ui.detail.json",
+      "saved": "current/native_ui.detail.json",
+      "bytes": 2310,
+      "sha256": "029e7fab1836f1665c32126f2f5523203fd890b7b0d61e8edec76ff976d4c5d4"
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/ui-self-test.json",
+      "saved": "current/native-ui/ui-self-test.json",
+      "bytes": 1390,
+      "sha256": "511d42f77cca42b89aebd0fdd4285b6221a58056b619cdafdd6aa48773be37af"
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/timeline.png",
+      "saved": "current/native-ui/timeline.png",
+      "bytes": 145646,
+      "sha256": "75d3a6ffdf590445df16ff92d06214df20b6a328412574848031068ad9adc662",
+      "width": 1180,
+      "height": 800
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/selection.png",
+      "saved": "current/native-ui/selection.png",
+      "bytes": 148815,
+      "sha256": "310f8460c48378167d1a5b323a16d2e3289856e37439ee95a29dbb5b424e9e19",
+      "width": 1180,
+      "height": 800
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/preview.png",
+      "saved": "current/native-ui/preview.png",
+      "bytes": 74170,
+      "sha256": "b84218a7492706351e5494ce385c70fb4dbb73fd514da866dc76f2eb527e756f",
+      "width": 850,
+      "height": 700
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/fragment.png",
+      "saved": "current/native-ui/fragment.png",
+      "bytes": 127966,
+      "sha256": "37cb7c2a59d4dd9f2cdc186981256dd2810b90b33e98c663064f697bd2007b39",
+      "width": 1060,
+      "height": 760
+    },
+    {
+      "source": "/Users/tianli/Apps/photo-desk/perf/acceptance/native-ui/settings.png",
+      "saved": "current/native-ui/settings.png",
+      "bytes": 46753,
+      "sha256": "eb3b9f377e891c002a5a08cda725560c234fca32dbf9d6f64a896e3596c2bee5",
+      "width": 670,
+      "height": 630
+    }
+  ],
+  "runtime_scope": "production App offscreen views/model actions with marked synthetic fixtures; not mobile Files/Scene, not Store capture, not performance",
+  "own_runtime_processes_remaining": [],
+  "actual_build_performed": false,
+  "strict_release_reuse": true,
+  "work_result_original": {
+    "ok": true,
+    "runs": 1,
+    "active": 1,
+    "busy": false
+  }
+}

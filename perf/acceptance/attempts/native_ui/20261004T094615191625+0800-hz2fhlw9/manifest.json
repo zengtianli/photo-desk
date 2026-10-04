@@ -1,0 +1,23 @@
+{
+  "app_id": "photo-desk",
+  "check": "native_ui",
+  "saved_at": "2026-10-04T09:46:15.191709+08:00",
+  "files": {
+    "native_ui.log": {
+      "sha256": "3be2ed618944eab284ef40fa4801feeeb80adf5cd5528c2291c778a668e8e0bb",
+      "bytes": 1996,
+      "mode": 420
+    },
+    "native_ui.detail.json": {
+      "sha256": "2893a29aafec76eeee83daabc60c7e6f073c474fd400d5b04ffe58bf52a7388e",
+      "bytes": 2310,
+      "mode": 420
+    },
+    "native_ui.json": {
+      "sha256": "5deb8f21e1b736954fbc84d5c2a6b99c515ae066ca3459d032f3314b9a64e255",
+      "bytes": 3099,
+      "mode": 420
+    }
+  },
+  "missing": []
+}

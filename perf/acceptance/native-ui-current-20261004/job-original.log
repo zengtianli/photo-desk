@@ -1,0 +1,12 @@
+{
+ "ok": true,
+ "app_id": "photo-desk",
+ "results": {
+  "native_ui": {
+   "status": "passed",
+   "method": "ui_automation",
+   "evidence": "perf/acceptance/native_ui.json",
+   "detail": "真实 SwiftUI 离屏渲染及模型动作通过：时间线选择、片段计数、预览关闭、设置自动保存与刷新。"
+  }
+ }
+}

@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "checks": {
+    "icon_review": {
+      "result": "passed",
+      "scope": "icon",
+      "method": "ui_automation",
+      "checked_at": "2026-10-01T10:41:53.041111+08:00",
+      "input_sha256": "e5863d1bc4dd44679716caf1b3cfe3c7a90c2ea36d55f64b8c70b1a352aef85e",
+      "evidence": "perf/acceptance/icon_review.json",
+      "evidence_sha256": "1f7b969f2c2a386e98b272493fe4580a1e531f7bf3e4de520b77b1f42c3ef099",
+      "detail": "builtin:icon_review：~/Dev/.venv/bin/python ~/Apps/chapter/engine/acceptors/icon_review.py → 机器审阅：尺寸齐全、非空白（16–1024 px 共 10 个表示，浅色/深色底拼图已存）"
+    },
+    "homepage_desktop": {
+      "result": "passed",
+      "scope": "promo_ui",
+      "method": "ui_automation",
+      "checked_at": "2026-10-01T14:14:26.632246+08:00",
+      "input_sha256": "53a86e3bab8bfc696a594572be4b4ab5c22c4e415b5e98d74785bf46c5dbace2",
+      "evidence": "perf/acceptance/homepage_desktop.json",
+      "evidence_sha256": "4df1a48c02e43e800056639b994613199a0b3c798b3bfefb39d35822deecbc70",
+      "detail": "builtin:homepage_desktop：~/Dev/.venv/bin/python ~/Apps/chapter/engine/acceptors/homepage.py --viewport desktop → desktop 1440px：HTTP 200，标题「PhotoDesk — 让照片，重新成为回忆」，无横向溢出，4 张图片全部加载"
+    },
+    "homepage_mobile": {
+      "result": "passed",
+      "scope": "promo_ui",
+      "method": "ui_automation",
+      "checked_at": "2026-10-01T14:14:26.453746+08:00",
+      "input_sha256": "53a86e3bab8bfc696a594572be4b4ab5c22c4e415b5e98d74785bf46c5dbace2",
+      "evidence": "perf/acceptance/homepage_mobile.json",
+      "evidence_sha256": "78f4a94ed3d8e17d076c1c8f30c61a88923bf362edab8d9835d861a58c8389a7",
+      "detail": "builtin:homepage_mobile：~/Dev/.venv/bin/python ~/Apps/chapter/engine/acceptors/homepage.py --viewport mobile → mobile 390px：HTTP 200，标题「PhotoDesk — 让照片，重新成为回忆」，无横向溢出，4 张图片全部加载"
+    },
+    "media_playback": {
+      "result": "passed",
+      "scope": "media",
+      "method": "ui_automation",
+      "checked_at": "2026-10-01T14:44:30.958510+08:00",
+      "input_sha256": "4bce8184f05951e1d2b53342813346ea2f011dbf19b151ad704c8491bfcc2ccc",
+      "evidence": "perf/acceptance/media_playback.json",
+      "evidence_sha256": "bb80827abed68db77a25be77a09a9e6325c3851f10739d21a96f4b957ab4a968",
+      "detail": "builtin:media_playback：~/Dev/.venv/bin/python ~/Apps/chapter/engine/acceptors/media_playback.py → 推广页 2 个视频在无界面浏览器中实际播放（1.3/15s、1.1/18s）"
+    },
+    "functionality": {
+      "result": "passed",
+      "scope": "code",
+      "method": "real_product",
+      "checked_at": "2026-10-01T10:42:10.641737+08:00",
+      "input_sha256": "d05246f940de5869c031b342cfc824fb2d5d8eeaf33062521cf1d719c24fc925",
+      "evidence": "perf/acceptance/functionality.json",
+      "evidence_sha256": "c1212b5a96b22c10135640d54aaa6876eb3a48f0116971bc646ac100440947e7",
+      "detail": "sop.accept：uv run python scripts/accept/functionality.py → 真实内置引擎完成 10 张合成图片归集、猫与会议分类、重复预选、Vision/OCR、计划回读和 Swift 合同验证。"
+    },
+    "recovery": {
+      "result": "passed",
+      "scope": "code",
+      "method": "real_product",
+      "checked_at": "2026-10-01T10:42:10.832276+08:00",
+      "input_sha256": "d05246f940de5869c031b342cfc824fb2d5d8eeaf33062521cf1d719c24fc925",
+      "evidence": "perf/acceptance/recovery.json",
+      "evidence_sha256": "6e3c47eabd6957c40513305a92fcb09d180da89775d9b98ab0d74d6c6ae153db",
+      "detail": "sop.accept：uv run python scripts/accept/recovery.py → 真实包内引擎跨进程恢复合成图库缓存；坏请求及坏输入保留有效状态；缺失计划自动重建，恢复后无变化不重写。"
+    },
+    "privacy": {
+      "result": "passed",
+      "scope": "code",
+      "method": "real_product",
+      "checked_at": "2026-10-01T10:42:14.179177+08:00",
+      "input_sha256": "d05246f940de5869c031b342cfc824fb2d5d8eeaf33062521cf1d719c24fc925",
+      "evidence": "perf/acceptance/privacy.json",
+      "evidence_sha256": "4a1bd3200d92d89a47361f392f0302fce6a7d21c6df4ba4db3c2f0dfd388e2c2",
+      "detail": "sop.accept：uv run --group build python scripts/accept/privacy.py → 完成引擎、CLI 私密输出与打包源码检查；真实图库只读结果为 passed。"
+    },
+    "native_ui": {
+      "result": "passed",
+      "scope": "ui",
+      "method": "ui_automation",
+      "checked_at": "2026-10-04T09:46:19.428156+08:00",
+      "input_sha256": "0a81f232c21592f5a711948763e670e0b0434933ce2c695510de40c7acf7cae3",
+      "evidence": "perf/acceptance/native_ui.json",
+      "evidence_sha256": "4cbf0879850c8886d2a5d3605cdd862b68b14d36cd219bf411d3c0c942cd7fa8",
+      "detail": "sop.accept：uv run python scripts/accept/native_ui.py → 真实 SwiftUI 离屏渲染及模型动作通过：时间线选择、片段计数、预览关闭、设置自动保存与刷新。"
+    },
+    "cli_entry": {
+      "result": "passed",
+      "scope": "cli_entry",
+      "method": "real_product",
+      "checked_at": "2026-10-01T10:41:35.263592+08:00",
+      "input_sha256": "3ff32a42f455aacc362d884cfe9b04700bae39b4cdbe17df8c8d2be180a5de3e",
+      "evidence": "perf/acceptance/cli_entry.json",
+      "evidence_sha256": "9293b1ec4f941935888ee0d07d9b650b972893ac06cf29d6418318da91b59d32",
+      "detail": "builtin:cli_entry：~/Dev/.venv/bin/python ~/Apps/chapter/engine/acceptors/cli_entry.py → 命令行在 App 里：photodesk — PhotoDesk · 照片台命令行：与 App 同一引擎、同一份时间线、计划、记录与设置。"
+    },
+    "installed_icon": {
+      "result": "passed",
+      "scope": "installed_icon",
+      "method": "ui_automation",
+      "checked_at": "2026-10-01T10:41:51.776237+08:00",
+      "input_sha256": "2df2318cd2fe80dc4504d4f1e3f7d4e3cc3b6af83934ec99cf3af22286616f36",
+      "evidence": "perf/acceptance/installed_icon.json",
+      "evidence_sha256": "79eff8c3fb9985eca806d28317010bf491da6e79ece58078cb92c8882b0359af",
+      "detail": "builtin:installed_icon：~/Dev/.venv/bin/python ~/Apps/chapter/engine/acceptors/installed_icon.py → 系统实际显示的装机图标与源图标一致（PhotoDesk.app 1.0.1 (50)：256px 均差 4.8 超差 0.00%，512px 均差 5.73 超差 0.00%；macOS 27.2.0，离屏读取）"
+    }
+  },
+  "updated_at": "2026-10-04T09:46:19.442761+08:00"
+}

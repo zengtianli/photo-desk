@@ -1,0 +1,61 @@
+{
+  "original_inputs": {
+    "stages": {
+      "test": "c942d0cf5f396df7df807c94b806c2d8614b0e1e3e9408d9d9993c78bed90381",
+      "perf": "06d7a0fc8371178f080c66ee992c4c34420b72b7fd628d529e5bd7492e261aa2",
+      "media": "d314e96462e634e48a44d26602cc96c47b1c8332dad6ad01f4061c0108aa091c",
+      "promo": "76456b42bf2f7a63cec0dc2124b2b4ad547ddf1825aaeb505ddf823ffde236e0",
+      "ship": "365590fb7dc0677d02a5f6801514a51408bd50c5217ad0ac61cfcfc8a5a0d9d6"
+    },
+    "bindings": {
+      "business": "33cd1cbb5f26e5d6f024adb0c956a37a8bf945b03268327432755ca0be96c0fb",
+      "code": "64de29468963ac8617fee6412f42c8328f1503cdc85c82f7dbaea84dd92c1d79",
+      "ui": "0a81f232c21592f5a711948763e670e0b0434933ce2c695510de40c7acf7cae3",
+      "promo_ui": "53a86e3bab8bfc696a594572be4b4ab5c22c4e415b5e98d74785bf46c5dbace2",
+      "media": "34e250ffc1fd5b3da3784b1573ad32ad111b7f6b53c83da0256ec6c7ba0e0835",
+      "icon": "e5863d1bc4dd44679716caf1b3cfe3c7a90c2ea36d55f64b8c70b1a352aef85e",
+      "installed_icon": "2df2318cd2fe80dc4504d4f1e3f7d4e3cc3b6af83934ec99cf3af22286616f36",
+      "cli_entry": "7b4f2e608521341d05ae42f632b9ab9864ca2c37705ff6b552dc72706a435c35"
+    },
+    "icon_inputs": {
+      "png": {
+        "path": "/Users/tianli/Apps/photo-desk/icon/AppIcon.png",
+        "sha256": "7c4e5bd69db21fe98c4933958351b62e8a7df5236d2c22970197b70c65c81b08"
+      },
+      "icns": {
+        "path": "/Users/tianli/Apps/photo-desk/icon/AppIcon.icns",
+        "sha256": "46ed4a2f298b9fccf159b99f333c49c5ffc68efaef9e509f2ca5b7bed36f8735"
+      },
+      "provenance": {
+        "path": "/Users/tianli/Apps/photo-desk/icon/provenance.json",
+        "sha256": "a08e98a27b702f83f36a1f05dc8c081c463ecef0306009d13ce668c3eacc1de3"
+      }
+    },
+    "installed_icon_inputs": {
+      "/Applications/PhotoDesk.app/Contents/Resources/AppIcon.icns": "ef8e840ac927d4037fe8ada5e8652146b8ce1019c7d609eb49aa33f73e9a755c"
+    },
+    "product_policy_sha256": "9e67da755a64208863bb02747e11bc65002304222149a75bfbe83331973a1696",
+    "product_naming_sha256": "758480fe2dce5522c5a67d194b53fbb7a90c2e1f2eccf0aec3f7df09bad8216b",
+    "icon_complete": true,
+    "installed_icon_matches": true,
+    "components": {
+      "business": "33cd1cbb5f26e5d6f024adb0c956a37a8bf945b03268327432755ca0be96c0fb",
+      "code": "64de29468963ac8617fee6412f42c8328f1503cdc85c82f7dbaea84dd92c1d79",
+      "perf": "84bd37dd36e4290b408c32eb4ec3952c94ee7f018c17996912c3df73923ccea6",
+      "ui": "1194ea9e12367f4a72eaccd4ca9c6b17bdefd267f17ef2eca00dc16716d6b169",
+      "media": "016446cd06bac3c3509e5ad922699db07cd0b225eae6136b25c62890cc5fe8f2"
+    }
+  },
+  "coverage_missing": [
+    "functionality",
+    "recovery",
+    "privacy",
+    "native_ui",
+    "media_playback",
+    "cli_entry"
+  ],
+  "strict_receipt": [
+    true,
+    "装机可执行文件、图标与当前构建输入均匹配 receipt"
+  ]
+}
