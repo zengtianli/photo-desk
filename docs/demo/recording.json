@@ -324,6 +324,16 @@
       ],
       "reason": "录像后修改为图标更新及后台图库变更检查/重复结果抑制；已核源码未改录像展示的时间线布局、选择或预览流程。页面保留原录制版本并明确沿用，不用旧录像证明新版耗时。",
       "reviewed_at": "2026-09-26"
+    },
+    "1.0.2 (56)": {
+      "recorded_version": "1.0.1 (10)",
+      "reviewed_at": "2026-10-05",
+      "reviewed_commits": [
+        "a1faa06e67786df55ee790d67d74d0e3e91eaa1e",
+        "c1ee0ed068146037dbe89d2a989fb84c6ea2bf37"
+      ],
+      "reason": "1.0.1 (50) 复核之后界面源码只有两次提交，都是共享的「配置与更新」：应用菜单新增两项、独立的配置/升级窗口及其按钮标题（Sources/PhotoDeskApp.swift 14 行、ProductControls.swift 9 行、Sources/Shared/ 三个新文件），时间线、片段选择、快速预览与重复核对建议的视图没有改动。录像只拍主窗口的这四处，不含应用菜单，沿用原录像；不作为新版耗时或系统图库写回证据。",
+      "evidence": "git log --since=2026-10-01 -- Sources 仅 a1faa06、c1ee0ed；git show --stat 两次提交均不含 ContentView.swift。Mac mini 上的独立只读复核（2026-10-05 22:07）与本机逐条核对结论一致；没有抽视频帧，画面依据是本记录的 scenes。"
     }
   }
 }
