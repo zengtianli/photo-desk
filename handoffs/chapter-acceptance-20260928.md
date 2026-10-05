@@ -63,7 +63,10 @@ bash scripts/test.sh
 还在队列里：
 
 - `photo-desk` 的整体重检 `2321c0a1…`：跑完后 install、readme 两项才会刷新。Chapter 的 worker 让 test / accept / perf 优先，check 要等这些排空才执行。
-- `photo-desk-mobile` 的 iPhone 启动冒烟 `a8ce43d9…`。前一次 `1656bed0…` 不是启动失败：共享模拟器车道拿到锁后在等 1 分钟负载降到 15 以下（19:54 读数 16.2），等待期间任务日志没有输出，被队列的 300 秒停滞规则收束，没有写出验收回执。负载降到 9 之后只重排了这一次；再停滞就不再重排，等引擎侧修好心跳。
+
+没有跑成、留到安静时再排：
+
+- `photo-desk-mobile` 的 iPhone 启动冒烟，仍是「待覆盖」。`1656bed0…` 不是启动失败：共享模拟器车道拿到锁后在等 1 分钟负载降到 15 以下（19:54 读数 16.2），等待期间任务日志没有输出，被队列的 300 秒停滞规则收束，没有写出验收回执。重排的 `a8ce43d9…` 在执行前被取消（机器过热降频，负载门过不去）。Chapter 侧已修停滞误判（`5d7314a`）和重检被饿死（`4075605`）。安静时排一次：`chapter enqueue --app photo-desk-mobile --action accept --check launch_iphone`。
 
 留给统一测量（本轮不测）：
 
