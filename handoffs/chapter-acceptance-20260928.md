@@ -49,3 +49,25 @@ bash scripts/test.sh
 4. 受本轮不装机/不发版/不部署边界限制，当前候选的运行和教程只在本仓交付。Apple 图库授权、真实写回/删除与系统恢复没有在合成测试中验收；不得把这些脚本的通过扩展到该范围。
 
 现有 `BackendClient.swift` 的 DispatchWorkItem Sendable 编译警告保留，未扩大成并发架构修改。
+
+## 2026-10-05 三项标准收尾（并行轮，photo-desk 与 photo-desk-mobile）
+
+本轮没有改源码、没有构建、没有重新装机，只做核对、推送和排队验收。
+
+已验证：
+
+- 登记测试在当前源码通过：Mac 任务 `923542bb…`、移动端任务 `61f39a93…`（均 19:38）。
+- 装机不需要重做。`/Applications/PhotoDesk.app` 实际是 1.0.2 (56)，可执行文件 SHA-256 `bb56e3b2…8956` 与 `perf/build-receipt.json`（来源提交 `c1ee0ed`，无未提交改动）及 `dist/PhotoDesk-1.0.2-56-arm64` 三者一致；发布包 SHA-256 `8f6e93da…b3fe` 与 `dist/release.json`、GitHub Release `v1.0.2-56` 一致。Chapter 状态里的「装机 1.0.1 (50)」「README 领先远端 2 个提交」是 ship / promo 阶段没有重读的旧缓存：引擎自己的读取函数现在返回装机 1.0.2 (56)，`git log @{u}..HEAD -- README.md README_EN.md` 为空。
+- `dc8c90a`（只含 `perf/` 下的原生界面验收回执和五张合成演示图库截图，逐张看过，无个人照片、无凭证）已推送到 `origin/main`。仓库没有 Pages、webhook、Actions 或 CI 文件，推送不触发构建或部署。
+
+还在队列里：
+
+- `photo-desk` 的整体重检 `2321c0a1…`：跑完后 install、readme 两项才会刷新。Chapter 的 worker 让 test / accept / perf 优先，check 要等这些排空才执行。
+- `photo-desk-mobile` 的 iPhone 启动冒烟 `a8ce43d9…`。前一次 `1656bed0…` 不是启动失败：共享模拟器车道拿到锁后在等 1 分钟负载降到 15 以下（19:54 读数 16.2），等待期间任务日志没有输出，被队列的 300 秒停滞规则收束，没有写出验收回执。负载降到 9 之后只重排了这一次；再停滞就不再重排，等引擎侧修好心跳。
+
+留给统一测量（本轮不测）：
+
+- Mac：实测仍是 1.0.1 (50)，要在已装的 1.0.2 (56) 上重测。装机已是当前源码的已核验构建；`sop.measure` 只登记了 `archive: release`，App 没接 ready 信号，也没登记 `in_use` / `quiet_launch`，所以冷启动测量会在 Dock 冒图标，只能在本人离开时跑。
+- iPhone / iPad / Apple Vision Pro：三条线当前输入同为 `1531f438…`。iPhone 旧实测绑定的是 `01c3eda7…`，iPad、Vision 还没有 `perf/platforms/<线>.json`。前置齐全：`sop.measure.command` 走 `scripts/native_platforms.py measure`（覆盖三条线，`in_use: true`），`LaneSignal` 已接，三条线都有 `-lane_demo YES` 启动参数。
+
+本人决定项：移动端「App Store Connect / 实际设备：没有可回读的运行/发布来源」，本轮不处理，不上传、不提审。
