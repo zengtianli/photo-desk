@@ -35,6 +35,37 @@ def cli(ctx: click.Context, config_path: str | None) -> None:
     读取类命令加 --json 输出 {"ok": ...}，失败以 1 退出。写入“照片”必须显式 --confirm
     （旧命令名用 --apply）；删除照片只在 App 内经系统确认，命令行止于 delete-check。
     图库默认与 App 相同；--config 的私有 YAML 只给旧工具和显式指定图库时使用。
+
+    \b
+    读命令（不改“照片”，不改 PhotoDesk 的数据）：
+      doctor 读回当前状态：版本、数据目录、图库能否读取、App 是否运行、时间线缓存
+      timeline duplicates photos audit plans plan-show records progress
+      settings delete-check reconcile
+    写命令：
+      refresh plan    只写 PhotoDesk 自己的索引、计划与缓存
+      settings set    改 App 设置；PhotoDesk 运行时拒绝，改后用 settings 读回
+      apply           加 --confirm 才写入“照片”，不加只预检；写后用 records 读回
+      backup ocr-extract shared-list dedup-export    只写各自的导出文件
+
+    \b
+    --json 输出（stdout，一个 JSON 对象）：
+      成功 {"ok": true, "command": "<命令>", ...}
+      失败 {"ok": false, "command": "<命令或 null>", "error": "原因"}
+      backup、ocr-extract 没有 --json，只输出文本进度。
+
+    \b
+    退出码：
+      0  成功（查无结果也算成功）
+      1  失败：操作失败、参数或用法错误、权限不足；doctor 的必需项未通过也是 1
+
+    \b
+    仅在窗口中：
+      确认删除（产品规定删除只在 App 内，PhotoKit 的系统确认须真人点；命令止于 delete-check）
+      完全磁盘访问权限、照片访问权限（系统授权须真人在系统设置里开；是否到位用 doctor 读）
+      录制快捷键（要真人按键）
+      上一张 / 下一张 / 关闭预览、显示主窗口、错误提示的收起、原生操作说明
+      在“照片”中打开、在“照片”中查看、打开本地记录、在 Finder 显示 App
+      PhotoDesk 安装与使用教程、配置与更新…
     """
     ctx.ensure_object(dict)
     ctx.obj["config_path"] = config_path

@@ -423,6 +423,38 @@ class AgentCommands(unittest.TestCase):
         self.assertEqual(written.returncode, 1)
         self.assertEqual(json.loads(written.stdout)['ok'], False)
 
+    def test_10_top_level_help_is_the_agent_contract(self):
+        """Reads and writes, the --json shape, exit codes and the window-only items are in --help,
+        and sop.agent_cli in project.yaml only names commands that help lists."""
+        import yaml
+        text = self.run_cli('--help').stdout
+        for heading in ('读命令', '写命令', '--json 输出', '退出码', '仅在窗口中'):
+            self.assertIn(heading, text)
+        listed = set(re.findall(r'^  ([a-z][a-z-]*)\s', text, re.M))
+        spec = yaml.safe_load((ROOT / 'project.yaml').read_text())['sop']['agent_cli']
+        self.assertEqual(spec['readback'], 'photodesk doctor')
+        self.assertIn('doctor', listed)
+        names = [feature['name'] for feature in spec['features']]
+        self.assertEqual(len(names), len(set(names)))
+        for feature in spec['features']:
+            kinds = {'command', 'human', 'missing'} & set(feature)
+            self.assertEqual(len(kinds), 1, feature)
+            if 'command' in feature:
+                main, sub = feature['command'].split()[:2]
+                self.assertEqual(main, 'photodesk', feature)
+                self.assertIn(sub, listed, feature)
+            if 'human' in feature:  # every window-only item is told to the agent in --help
+                self.assertIn(feature['name'], text, feature)
+
+    def test_11_readback_is_read_only_json(self):
+        state = self.root / 'state'
+        before = sorted((str(f.relative_to(state)), f.stat().st_mtime_ns) for f in state.rglob('*') if f.is_file())
+        data = json.loads(self.run_cli('doctor', '--json').stdout)
+        self.assertEqual(data['command'], 'doctor')
+        self.assertIn('engine', [check['name'] for check in data['checks']])
+        after = sorted((str(f.relative_to(state)), f.stat().st_mtime_ns) for f in state.rglob('*') if f.is_file())
+        self.assertEqual(before, after)
+
 
 class SettingsCommand(unittest.TestCase):
     def setUp(self):
