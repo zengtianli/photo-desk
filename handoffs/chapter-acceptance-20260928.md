@@ -74,3 +74,44 @@ bash scripts/test.sh
 - iPhone / iPad / Apple Vision Pro：三条线当前输入同为 `1531f438…`。iPhone 旧实测绑定的是 `01c3eda7…`，iPad、Vision 还没有 `perf/platforms/<线>.json`。前置齐全：`sop.measure.command` 走 `scripts/native_platforms.py measure`（覆盖三条线，`in_use: true`），`LaneSignal` 已接，三条线都有 `-lane_demo YES` 启动参数。
 
 本人决定项：移动端「App Store Connect / 实际设备：没有可回读的运行/发布来源」，本轮不处理，不上传、不提审。
+
+## 2026-10-07 每项功能都能不点界面完成（photo-desk 与 photo-desk-mobile）
+
+约定见 app 技能 `references/agent-cli.md`，缺口来源是 Chapter 的 `docs/PRD-agent-cli.md`（R5：`photodesk-import` 没有 `--json` 和读回；R6：`photodesk` 顶层帮助没有退出码）。
+
+做了什么：
+
+- Mac（提交 `1788e4e`）：`photodesk --help` 补齐读命令与写命令、`--json` 输出形状、退出码表、“仅在窗口中”。命令本身和 JSON 结构没改；用法错误仍按原样退出 1（已有测试钉着），帮助里照实写。`project.yaml` 新增 `sop.agent_cli`，读回命令是 `photodesk doctor`。
+- 手机端（组件仓提交 `04efb74`）：`photodesk-import` 新增 `status`（不带参数报命令自身，`--package` 读结果包，`--container` 读 `import` 写出的容器）、`event --id`（片段详情与其中照片，`preview` 是核过 SHA 的预览文件路径），`search` 可读 `--container`。加 `--json` 时失败也在 stdout：`{"ok": false, "error": {"code", "message"}}`；用法错误退出 2，未知参数不再被忽略。片段条目新增 `end_date`、`count`、`place`、`tracks`，原有字段与不加 `--json` 时失败写 stderr 的行为不变。Core 与 App 源码没动，手机 App 不用重新构建。
+
+对照结果（从 `Sources/` 与 `App/LibraryView.swift` 逐项列）：
+
+| 组件 | 功能 | 有命令 | 仅真人或仅窗口 | 暂缺 |
+|---|---|---|---|---|
+| photo-desk | 75 | 49 | 14 | 12 |
+| photo-desk-mobile | 13 | 9 | 3 | 1 |
+
+Mac 暂缺 12 项：
+
+- 共享生命周期模块暂无命令入口 5 项：使用 iCloud 记住配置、导出配置…、导入配置…、检查更新、升级到新版…。等共享模块统一出命令后改登记，本仓不各自实现。
+- 快捷键 3 项：已绑定的快捷键与冲突提示、作用范围、清除绑定。`shortcuts.v1` 与设置同在一个偏好域，可照 `backend/preferences.py` 的做法加 `photodesk shortcuts`（读、清除、改范围）；组合键的显示名在 Swift 里算，别在 Python 再写一份。
+- 暂停 / 继续自动整理、取消进行中的任务：命令够不到正在运行的 App 进程。
+- 登录 Mac 时启动：由 App 进程向系统登记（SMAppService），命令读不到也改不了。
+- 导入验收测试图…：经 PhotoKit 向系统图库新建合成测试图，只在 App 内。
+
+手机端暂缺 1 项：命令够不到手机上的 App 容器，读不到手机当前导入的是哪一份，也不能替它导入或替换；只能读同一个结果包或 Mac 上 `import` 写出的容器。
+
+怎么验的：
+
+- Mac：`bash scripts/test.sh` 75 项 Python 加 Swift 控件通过。新增两项：帮助里有四样且对照表里的子命令都在帮助的命令列表、每个 human 项都在“仅在窗口中”；`doctor --json` 前后数据目录文件清单不变。
+- 手机端：`bash scripts/test-core.sh` 28 个 XCTest 通过；`scripts/smoke_cli.py` 在临时合成结果包上覆盖 `status`、`event`、容器读回、`--json` 失败、退出 2、读命令不写文件；`scripts/test_cli_installation.py` 5 项通过。
+- 装机：`scripts/accept/build.py` 从 `1788e4e` 构建 1.0.2 (62)（工作树干净），`scripts/install_app.py` 装机，PhotoDesk 当时未运行、装后没有启动；旧版 56 在废纸篓 `photodesk-install-20261007-010904-0730e8b8`。手机端命令按 README 的 bind → dry-run → install → check 装到 `~/Library/Application Support/PhotoDeskMobile/CLI`（二进制 `3f240628…`，旧版 `519e9ce0…` 目录仍在）。装前装后 `defaults export cyou.tianli.PhotoDesk` 逐字节相同，`~/Library/Application Support/PhotoDesk` 1,439 个文件的大小与修改时间全部相同；手机端运行目录只多了新版本目录并换了 `current.json`。
+- 自查：`chapter sop accept --app <组件> --check agent_cli` 两个组件都是“暂缺”，登记与帮助的问题为零，读回命令输出可解析的 JSON。实跑 `photodesk doctor --json` 退出 0，`photodesk timeline --no-such-flag --json` 退出 1 并带 `error`；`photodesk-import status --json` 退出 0，`photodesk-import status --no-such-flag --json` 退出 2 并带 `error.code = usage`。
+
+没做的：
+
+- 上面 13 项暂缺。
+- `README.md` / `README_EN.md` 的命令一节没有同步退出码与对照表说明（改 README 会牵动主页与卡片检查，留到下次动 README 时一起）。
+- 没有推送、没有发行。装机的 62 比线上发行的 56 新，只差帮助文字与登记；本节提交之后 HEAD 再多一个文档提交。
+- 重签名是 ad-hoc，与此前每次装机一样：系统里给 PhotoDesk.app 的完全磁盘访问 / 照片权限是否需要重新勾选，本轮没有打开 App 验证。
+- 手机端 `scripts/static_check.py` 在本轮之前就不过（`launch_ipad` 前面带了 `SOP_FUNCTIONAL_THIN=1`，断言要求以 `python3 scripts/native_platforms.py launch` 开头），没有改。
