@@ -115,3 +115,85 @@ Mac 暂缺 12 项：
 - 没有推送、没有发行。装机的 62 比线上发行的 56 新，只差帮助文字与登记；本节提交之后 HEAD 再多一个文档提交。
 - 重签名是 ad-hoc，与此前每次装机一样：系统里给 PhotoDesk.app 的完全磁盘访问 / 照片权限是否需要重新勾选，本轮没有打开 App 验证。
 - 手机端 `scripts/static_check.py` 在本轮之前就不过（`launch_ipad` 前面带了 `SOP_FUNCTIONAL_THIN=1`，断言要求以 `python3 scripts/native_platforms.py launch` 开头），没有改。
+
+## 2026-10-07 下午 补齐暂缺的命令（12 → 3）并装机 1.0.2 (64)
+
+本轮授权只有本人一句“好，继续做完，铺开”；下面的具体做法是执行单元按铺开约定自行定的，不是本人逐条同意的。只做了本地提交和装机，没有推送、没有发行、没有部署，没有跑性能测量。
+
+结果：`chapter agent-cli --json --app photo-desk` 现算为 76 项功能，命令 59、真人或窗口 14、暂缺 3，登记与帮助的问题为零。装机 `/Applications/PhotoDesk.app` 是 1.0.2 (64)，源码提交 `4c7908e`。
+
+新增六个命令词，全部由 App 可执行文件自己回答（`Sources/AgentCommands.swift`，`PhotoDeskEntry.main` 在创建任何窗口之前分发并退出），冻结引擎只把参数原样转交、把输出和退出码原样带回（`backend/desk_cli.py` 的 `APP_VERBS`）：
+
+| 命令 | 对应界面 | 说明 |
+|---|---|---|
+| `config status｜export｜import｜sync on｜off`、`update check` | 「配置与更新…」窗口 | 共用命令层 `Sources/Shared/AppLifecycleCLI.swift`，总部逐字节副本（sha256 `c869edf8…`）；另三份共用副本没有动，窗口没有换版 |
+| `shortcuts`、`shortcuts scope`、`shortcuts clear` | 设置窗口“快捷键”页 | 用 `PhotoShortcuts` 本身的规则和显示名；不向系统注册快捷键 |
+| `login status｜on｜off` | “登录 Mac 时启动” | 同一个系统登录项（SMAppService） |
+| `automation status｜pause｜resume` | “暂停自动整理 / 继续自动整理” | 由运行中的 App 自己执行并应答 |
+| `cancel` | 状态栏“取消” | 同上；正在写入图库时拒绝 |
+
+这六个命令失败时 `error` 是 `{code, message}`，用法错误退出 2；原有命令的输出结构和退出码没有改（用法错误仍是 1），`photodesk --help` 里两种都照实写了。
+
+改动的边界（声明登记在 claims，会话 `agentcli-photo-desk`）：
+
+- 新增 `Sources/AgentCommands.swift`、`Sources/Shared/AppLifecycleCLI.swift`、`tests/test_lifecycle_cli.py`。
+- `Sources/PhotoDeskApp.swift`：`PhotoDeskEntry.main` 开头的分发，和 `PhotoDeskApp.init` 里原来装「配置与更新」的那一段（改为调同一个工厂，并加上应答 `automation` / `cancel` 的一行）。
+- `Sources/ViewModel.swift`：只动 `preferences` 的 `didSet` 开头，新增 `adoptingStored`。运行中的 App 采纳别的进程已经存好的设置时，不再把自己读到的值存回去。
+- `PhotoDesk.xcodeproj/project.pbxproj` 只加两个源文件；`backend/bridge.py` 只动 `dispatch()`；`backend/desk_cli.py` 只在末尾加转交一节；`backend/photocli/cli.py` 只动命令组的帮助。
+- `tests/test_cli.py`、`scripts/accept/cli_checks.py` 只在各自钉住的命令清单里加六个词；`tests/test_desk_cli.py` 只动帮助检查；`scripts/test.sh` 多编译一份 App 可执行文件给测试用；`build.sh` 在签名之后、装机之前多跑一段组装包自检。
+- `project.yaml` 只动 `sop.agent_cli`；`CLAUDE.md` 加了一条。
+- 没碰：ContentView、ProductControls、Models、BackendClient、UISelfTest、backend 其余文件、ios/、site/、README、`perf/lightweight.json`、共用层原版、Chapter、别的产品。
+
+每个命令的限制：
+
+- `automation pause｜resume`、`cancel` 要 PhotoDesk 正在运行。没运行时 `automation status` 和 `cancel` 照实回答并退出 0，`pause｜resume` 退出 1（`app_not_running`）。它们只改这一次运行的状态，不改设置。
+- `shortcuts scope｜clear` 在 PhotoDesk 运行时拒绝（`app_running`），和 `settings set` 是同一条规矩。命令只能改已有绑定的作用范围和清除绑定，组合键仍要在窗口里按键录制。
+- `shortcuts` 报告的是保存下来的绑定和能从绑定本身判断的冲突。系统是否接受某个全局快捷键的注册只有运行中的 App 知道，命令读不到。
+- `login on｜off` 要 `--yes`；隔离或演示运行一律拒绝改系统登录项。
+- `config`、`update` 在隔离运行里要求 `PHOTODESK_PREFERENCES_SUITE` 是 `PhotoDesk.Test.` 开头的测试域；不隔离时带着测试域或演示图库会被拒绝（`isolation_incomplete`），不会把测试值同步到真实 iCloud。
+
+暂缺 3 项：
+
+- 导入验收测试图…：要经 PhotoKit 向本人的系统图库新建照片，需要 App 自己的照片写入授权。没有做。
+- 升级到新版…：按约定命令不做静默安装，`update check` 给出新版、按钮名、安装包地址与步骤。
+- iCloud 配置同步状态那句实时状态：由运行中的 App 持有，命令只回报它自己那一次同步的结果。这一项是本轮新列出来的，原来的对照里没有单列。
+
+怎么验的：
+
+- `bash scripts/test.sh`：87 项 Python（其中 3 项要组装包，在这里跳过）加 Swift 控件检查通过；改动前是 75 项。整套连续跑 6 次都通过。
+- `tests/test_lifecycle_cli.py` 全程隔离、不上屏：把编好的程序拷进临时目录里一个换了 bundle id 的 .app，用 `PhotoDesk.Test.*` 偏好域、临时的支持目录和“云”目录、私有通知频道。同一个程序再起一份充当运行中的 App（`--lifecycle-follow-probe`，激活策略 `.prohibited`，真实的 `PhotoDeskModel` 加生产接线函数，共用窗口建出来但不显示）。每次判定都由新起的进程读回存储值。
+  - 开关：拨三轮开和关；连发开、关三次；连发开、关、开一次。每次命令返回后 1 到 1.5 秒内，App 的读数、窗口里的开关和新进程读到的值都停在最后一条命令上。
+  - 导入：同步开着时导入一次，再连发两次导入；同步关着时再导入一次。存储值和“云”那份一直是导入值，App 重读到新设置和新快捷键。
+  - 暂停、继续、取消：对着探针里一个只会睡眠的替身引擎，继续之后 App 进入整理，暂停之后停下；连发继续、暂停后停在暂停；起一个进行中的任务后 `cancel` 返回已取消并等到任务结束。
+- 回写隐患另做了一次计数（脚本没有进仓库）：15 对背靠背导入、同步开着、App 在运行，改 `adoptingStored` 之前和之后都是 0 次被撤销。也就是说原来的写法在这个条件下没有复现回写；“采纳时不回存”是按源码推理补的结构性保证，不是修一个复现出来的故障。
+- 构建 1.0.2 (64)：`uv run python scripts/accept/build.py`，回执绑定提交 `4c7908e`、工作树干净。构建产物上 `native_ui` 16/16、`functionality` 11/11、`recovery` 11/11（直接跑脚本，输出在 `build/acceptance/`，没有写 Chapter 的证据）。
+- 装机：`scripts/install_app.py`，PhotoDesk 当时未运行，装后没有启动。旧版 62 在 `~/.Trash/photodesk-install-20261007-142630-2069c7ba`。
+  - 签名：装前装后 `spctl -a -vv` 都是 `rejected`，都是临时签名（`Signature=adhoc`），等级没有变。
+  - 偏好与数据：`defaults export cyou.tianli.PhotoDesk` 装前装后逐字节相同；`~/Library/Application Support/PhotoDesk` 1,439 个文件的 SHA-256 全部相同。跑完下面所有命令后再比一次，仍然相同，也没有生成同步目录。
+  - 原有命令：`settings`、`plans`、`records`、`timeline`、错误参数这五个 `--json` 输出与装前逐字节相同；`doctor` 只有版本号变了。`photodesk --help` 相对装前只多不少，唯一改写的一行是“仅在窗口中”里的“配置与更新…”改成“打开「配置与更新…」窗口”。
+- 装机版的新命令：
+  - 读真实状态：`config status`（同步关，可迁移项 1 个）、`shortcuts`（0 个绑定）、`login status`（`not_found`，关）、`automation status`（App 未运行）都退出 0。
+  - 错误参数：`config status --no-such`、`shortcuts --no-such`、`login maybe`、`automation stop`、`cancel now` 都退出 2，`error.code` 是 `usage`。
+  - `update check`：在隔离环境变量下跑了一次，联网读到公开发行记录 1.0.2 (56)，当前 64，`up_to_date`。
+  - 隔离整条链：`PHOTODESK_APP=/Applications/PhotoDesk.app` 跑组装包自检 3 项通过（跟随开关与导入；用包里真实的引擎在合成验收图上继续再暂停自动整理）；再把装机版的可执行文件拷进临时 .app 跑 9 项通过（含取消一个进行中的任务）。
+
+没有验证的：
+
+- 真实窗口。`PhotoDeskApp.init` 里改过的那两行接线只经过编译，以及探针调用的同一对函数；带窗口的 PhotoDesk 这一轮没有打开过。本人下次打开就是第一次真实启动。开着真实窗口时跑 `photodesk automation pause` 或 `config sync on/off`，窗口是否跟着变，没有实机证据。
+- 真实偏好域和真实 iCloud Drive 上的 `config sync on`、`config import`。只在隔离目录里跑过。
+- `login on｜off` 的真实拨动。只跑过读状态、`--dry-run`、缺 `--yes` 和隔离拒绝；没有改过系统登录项。
+- 系统拒绝注册全局快捷键时的提示，命令读不到。
+- 临时签名重装后，系统里给 PhotoDesk.app 的完全磁盘访问和照片权限是否要重新勾选，没有打开 App 验证（和上一轮一样）。
+
+要如实交代的两件事：
+
+- 验错误参数时，对真实偏好域跑过一次不带 `--yes` 的 `photodesk config sync on --json`。它在确认参数那一步就返回了（退出 2，`confirmation_required`），前后偏好逐字节相同、没有生成同步目录。约定是这类命令一律走隔离环境，这一次没有照做。
+- 整套测试有一次出过 1 个错误加 2 个连带失败，日志没有留下。之后查到并改掉的是测试自己的一处竞态（命令返回后立刻读 App 每 50 毫秒写一次的状态文件，会读到上一拍）。那一次的错误是不是同一个原因，没有证据；改后整套 6 次、单项 200 次请求都没有再出现。
+
+没做的：
+
+- `README.md` / `README_EN.md` 的命令一节没有同步这六个命令（上一轮留下的同一条）。
+- Chapter 里 functionality、recovery、native_ui、cli_entry 等验收证据绑定的是旧输入，要等 Chapter 自己重跑；本轮只跑了 `agent_cli`。演示素材是否沿用也没有复核（界面源码这次有变动，但只是入口分发和一处不回存，没有改视图）。
+- 界面里没有新增任何开关或文字。
+
+已知的小毛病：`settings set` 用 `pgrep -x PhotoDesk` 判断 App 是否在运行。现在这六个命令也是用 PhotoDesk 这个可执行文件回答的，所以两个命令恰好同时跑时，`settings set` 可能误报“正在运行”而拒绝，重试即可。没有改 `backend/preferences.py`。
