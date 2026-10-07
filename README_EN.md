@@ -1,5 +1,7 @@
 # PhotoDesk
 
+1.0.3 adds app management commands for configuration sync status, shortcut bindings, launch at login, pausing and cancelling organization, hidden startup and normal exit. `photodesk doctor` reads Photos permission status; `photodesk update check --json` checks public releases. This unnotarized download edition uses manual installation for updates.
+
 The Mac app menu includes **Configuration and updates…** and **Check for updates…**. Export/import organization rules, display preferences and shortcuts, or enable optional iCloud settings sync, off by default. With iCloud Drive and sync enabled on two Macs using the same Apple account, a new Mac restores existing preferences. Restores create backups and reject damaged files. Photos, library paths, recognition caches, login items and permissions stay on each device. Update checks read published releases from the existing public repository.
 
 [中文](README.md) | **English**
@@ -19,7 +21,7 @@ Read the local [getting-started guide and captioned demos (Chinese)](docs/demo/t
 
 Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size; it runs as a subprocess and exits when done. While the app is open it checks every 60 seconds, read-only, only the photo data the engine actually uses, so system analysis and search-index writes do not count as changes. If nothing relevant changed, the engine does not start; if it did, the timeline is rebuilt, and when the result matches what is already on screen nothing is rewritten or redrawn. Back-to-back batches of 12 photos run only during the first content recognition pass.
 
-<sub>v1.0.1 (50) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,393 items (2,722 timeline segments) · measured 2026-10-01. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.0.1 (50) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,393 items (2,722 timeline segments) · measured 2026-10-01. Historical measurements on the listed device, not new measurements of 1.0.3. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## Usage
@@ -117,8 +119,14 @@ photodesk doctor --json                         # engine, data folder, library a
 | Delete pre-check (⌘⌫) | `delete-check …` |
 | Local records | `records [--kind apply]`, `records --kind delete` |
 | Settings window | `settings`, `settings set KEY VALUE` |
+| Configuration export/import, iCloud sync and status | `config export/import/sync/status` |
+| Check for and obtain an update | `update check`, `update install` (this download edition returns the download URL when newer; install manually) |
+| List, set, clear and scope shortcuts | `shortcuts`, `shortcuts set/clear/scope` |
+| Launch at login | `login status/enable/disable` |
+| Organization status, pause, resume and cancel the current task | `automation status/pause/resume`, `cancel` |
+| Hidden startup and normal exit | `start`, `quit` |
 
-What stays in the App: **deleting photos** (PhotoKit and the system confirmation live in the App; the command line stops at `delete-check`); pausing/resuming automatic organizing (state of the running App; the persistent Automatic switch is `settings set automatic`); launch at login; Open in Photos, opening Photos, revealing records in Finder and privacy-pane links; importing the acceptance test photo; and interface gestures such as Space preview, zoom, video playback, grid size, live appearance changes, shortcut recording and cancelling a task. `settings set` accepts only values the Settings window can produce and refuses while PhotoDesk runs (the running App would overwrite the change). `photos` saves no plan; use `plan library` before a delete pre-check.
+What stays in the App: **deleting photos** (PhotoKit and system confirmation; the CLI stops at `delete-check`); Open in Photos, opening Photos, revealing records in Finder and privacy-pane links; importing the acceptance test photo (a product boundary: no unattended test writes to the owner's library); and interface gestures such as Space preview, zoom, video playback, grid size, live appearance changes and shortcut recording. `settings set` accepts only values the Settings window can produce and refuses while PhotoDesk runs. Set a binding with `shortcuts set pause ctrl+opt+p application`; shortcut changes also refuse while the App runs. `start` launches hidden; the normal App still has a Dock icon. `quit` refuses during a library write. `photos` saves no plan; use `plan library` before a delete pre-check.
 
 Old command names remain as aliases of the same flow: `classify-plan`/`title-plan` = `plan classify|title`, `triage`/`ocr-scan` = `plan triage|sensitive` (with `--apply`, the new plan is then written in full), `classify-apply`/`title-apply` = `apply <latest plan of that kind> --select-all` (writes only with `--apply`). Old CSV plans are retired; titles are only suggested for untitled photos, and screenshot triage no longer creates a delete album. Command-line-only tools: `backup`, `ocr-extract`, `shared-list`, `dedup-export` and `reconcile`, with output in `~/Library/Application Support/PhotoDesk/cli/`. `reconcile` (read-only), `shared-list` (writes the shared-album checklist) and `dedup-export` take `--json`; `backup` and `ocr-extract` are long tasks and print text progress only. They read a private YAML file (`--config` or `PHOTOCLI_CONFIG`, by default `cli-config.yaml` in the data directory, else neutral bundled defaults). When `--config` is passed explicitly, its `library` also applies to the other commands. Personal configuration is never included in the App or public repository.
 
@@ -144,6 +152,6 @@ Third-party sources: [osxphotos](https://github.com/RhetTbull/osxphotos), [PyIns
 
 `python3 scripts/release.py` builds without installing, generating a ZIP, SHA-256, and `release.json` in `dist/`. It checks the bundled runtime, synthetic OCR, missing-library behavior, and error contract from a relocated app package. Read-only checks do not access system photos and do not replace first-time permissions, GUI verification, or deletion/recovery verification on a new computer. Third-party licenses are bundled; source is available in the [existing public repository](https://github.com/zengtianli/photo-desk).
 
-`python3 scripts/build_site.py --preview` generates a light-theme preview in `build/site/`. See [docs/demo/README.md](docs/demo/README.md) for real screenshots, videos, and evidence requirements. Production `python3 scripts/build_site.py` requires a complete release package and verified real media. Public files are passed to the existing site deployment entry point through the `site-manifest.json` allowlist; source directories and raw recordings must not be synced.
+`python3 scripts/build_site.py --preview` generates a light-theme preview in `build/site/`. See [docs/demo/README.md](docs/demo/README.md) for real screenshots, videos, and evidence requirements. Production `python3 scripts/build_site.py` requires a complete release package and verified real media. Use `--keep-history` to retain reviewed older recordings with their actual versions, dates and limits (new settings UI and performance are not covered). Public files are passed to the existing site deployment entry point through the `site-manifest.json` allowlist; source directories and raw recordings must not be synced.
 
 The distributed version defaults to empty pet names while retaining existing saved settings. `PHOTODESK_PREFERENCES_SUITE`, `PHOTODESK_DATA_ROOT`, and `PHOTODESK_DEMO_ROOT` support isolated synthetic verification. Demo isolation strictly rejects connecting to or modifying the system Photos library; it is not a general folder-import feature.

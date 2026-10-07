@@ -21,6 +21,12 @@ PhotoDesk 安装与使用
 删除会影响原照片，并随 iCloud 同步到其他设备。恢复请使用 Apple“照片”的
 “最近删除”；恢复期限由系统显示，不要把它代替备份。
 
+配置与更新：App 菜单的“配置与更新…”可导出、导入设置，或选择开启 iCloud 配置同步
+（默认关闭）。同步整理规则、显示偏好和快捷键，不同步照片、图库路径、缓存和权限。
+“检查更新…”读取公开发行；本地签名下载版按下载地址手动安装新版。
+App 内有命令行工具；链接到 PATH 后用 photodesk --help 查看命令，
+photodesk update check --json 可只读检查当前版与公开版。
+
 帮助：https://app-mac-photodesk.tianli.cyou/#faq
 版本和 SHA-256 以下载页面及 release.json 为准。
 第三方组件许可位于 THIRD_PARTY_NOTICES.txt。

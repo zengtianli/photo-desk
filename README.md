@@ -1,5 +1,7 @@
 # PhotoDesk
 
+1.0.3 新增 App 管理命令：配置同步状态、快捷键设置、登录启动、暂停与取消整理、隐藏启动与正常退出。`photodesk doctor` 可读回照片权限状态；`photodesk update check --json` 检查公开发行，未公证下载版通过安装教程手动更新。
+
 Mac 应用菜单新增「配置与更新…」和「检查更新…」。可导出、导入整理规则、显示偏好和快捷键，或选择开启 iCloud 配置同步（默认关闭）。两台 Mac 使用同一 Apple 账户、开启 iCloud Drive 并开启配置同步后，新机优先恢复已有配置；恢复前自动备份，损坏配置不覆盖。照片、图库路径、识别缓存、登录项和系统权限由各设备保留。更新检查读取现有公开仓库的已发布版本，提供下载/升级入口。
 
 **中文** | [English](README_EN.md)
@@ -19,7 +21,7 @@ Mac 应用菜单新增「配置与更新…」和「检查更新…」。可导�
 
 SwiftUI 原生窗口，不开 HTTP 服务；照片解析交给包内 PyInstaller 打包的 Python 引擎（安装体积主要来自它），以子进程运行、做完即退出。打开期间每 60 秒只读查一次引擎实际用到的照片数据，系统分析、搜索索引等无关写入不算变化；图库没变就不启动引擎，变了才重建时间线，结果与当前显示相同时不重写文件、不重绘。首次内容识别期间才连续按每批 12 张处理。
 
-<sub>v1.0.1 (50) · Mac16,12 / Apple M4 / macOS 27.2 · 真实照片图库 6,393 项（2,722 个时间线片段） · 2026-10-01。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
+<sub>v1.0.1 (50) · Mac16,12 / Apple M4 / macOS 27.2 · 真实照片图库 6,393 项（2,722 个时间线片段） · 2026-10-01。数字来自所列设备的历史实测，不代表 1.0.3 新测。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
 <!-- lightweight:end -->
 
 ## 使用
@@ -117,8 +119,14 @@ photodesk doctor --json                         # 引擎、数据目录、读库
 | 删除前核对（⌘⌫） | `delete-check …` |
 | 本地记录 | `records [--kind apply]`、`records --kind delete` |
 | 设置窗口 | `settings`、`settings set KEY VALUE` |
+| 配置导出、导入、iCloud 同步及其状态 | `config export/import/sync/status` |
+| 检查更新、获取新版 | `update check`、`update install`（当前下载版有更新时返回下载地址，需要手动安装） |
+| 快捷键列表、设置组合键、清除与作用范围 | `shortcuts`、`shortcuts set/clear/scope` |
+| 登录启动 | `login status/enable/disable` |
+| 自动整理状态、暂停、继续、取消当前任务 | `automation status/pause/resume`、`cancel` |
+| 隐藏启动、正常退出 | `start`、`quit` |
 
-只留在 App 里的：**删除照片**（PhotoKit 与系统确认只在 App 内，命令止于 `delete-check`）；暂停/继续自动整理（运行中 App 的状态，持久的“自动整理”开关用 `settings set automatic`）；登录启动；在“照片”中打开、打开“照片”、在 Finder 中显示记录、权限设置链接；导入验收测试图；空格预览、放大、视频播放、网格大小、外观切换的即时效果、快捷键录制与取消任务等界面动作。`settings set` 只接受设置窗口能选出的值，App 运行时会拒绝（运行中的 App 会覆盖外部修改）；`photos` 不保存计划，要核对删除请用 `plan library`。
+只留在 App 里的：**删除照片**（PhotoKit 与系统确认只在 App 内，命令止于 `delete-check`）；在“照片”中打开、打开“照片”、在 Finder 中显示记录、权限设置链接；导入验收测试图（产品边界，不在本人图库无人值守写入测试）；空格预览、放大、视频播放、网格大小、外观切换的即时效果与快捷键录制等界面动作。`settings set` 只接受设置窗口能选出的值，App 运行时会拒绝；快捷键组合可用 `shortcuts set pause ctrl+opt+p application` 设置，运行时也拒绝修改。`start` 隐藏启动，正常 App 仍会显示 Dock 图标；`quit` 在写入图库时拒绝退出。`photos` 不保存计划，要核对删除请用 `plan library`。
 
 旧命令名保留为同一流程的别名：`classify-plan`/`title-plan` = `plan classify|title`，`triage`/`ocr-scan` = `plan triage|sensitive`（`--apply` 再对新计划全部写入），`classify-apply`/`title-apply` = `apply <最近同类计划> --select-all`（`--apply` 才写）。旧 CSV 计划已停用；标题只补空标题，截图分桶不再建删除相册。仅命令行才有的工具：`backup`、`ocr-extract`、`shared-list`、`dedup-export`、`reconcile`，产物保存在 `~/Library/Application Support/PhotoDesk/cli/`；其中 `reconcile`（只读对账）、`shared-list`（写共享相册手动清单）、`dedup-export` 支持 `--json`，`backup`、`ocr-extract` 是长任务，只输出文本进度；它们读私有 YAML（`--config` 或 `PHOTOCLI_CONFIG`，默认数据目录的 `cli-config.yaml`，不存在时用中性默认）。显式传 `--config` 时，其中的 `library` 也用于其他命令。个人配置不包含在 App 或公开仓库中。
 
@@ -144,6 +152,6 @@ Xcode 选择和图标工厂复用总部现有引擎。构建产物位于 `build/
 
 `python3 scripts/release.py` 构建但不装机，在 `dist/` 生成 ZIP、SHA-256 和 `release.json`，并从移动后的应用包检查内置运行时、合成 OCR、缺失图库与错误契约。只读检查不访问系统照片；不能代替新电脑上的首次授权、GUI 或删除恢复验收。包内包含第三方许可，源码见[现有公开仓库](https://github.com/zengtianli/photo-desk)。
 
-`python3 scripts/build_site.py --preview` 生成亮色预览到 `build/site/`。真实截图、视频和证据契约见 [docs/demo/README.md](docs/demo/README.md)。正式 `python3 scripts/build_site.py` 要求完整发行包和经过核对的真实媒体；公开文件通过 `site-manifest.json` 白名单交给既有站群部署入口，禁止同步源码目录或原始录屏。
+`python3 scripts/build_site.py --preview` 生成亮色预览到 `build/site/`。真实截图、视频和证据契约见 [docs/demo/README.md](docs/demo/README.md)。正式 `python3 scripts/build_site.py` 要求完整发行包和经过核对的真实媒体；保留旧版演示时用 `--keep-history`，明确标注实际版本、日期及未覆盖的新版设置界面和性能。公开文件通过 `site-manifest.json` 白名单交给既有站群部署入口，禁止同步源码目录或原始录屏。
 
 分发版默认宠物名字为空；已有保存设置保持原样。`PHOTODESK_PREFERENCES_SUITE`、`PHOTODESK_DATA_ROOT`、`PHOTODESK_DEMO_ROOT` 用于独立合成验收；演示隔离强制拒绝连接、修改系统 Photos 图库，不是通用文件夹导入功能。
