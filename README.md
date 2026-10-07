@@ -122,7 +122,7 @@ photodesk doctor --json                         # 引擎、数据目录、读库
 | 配置导出、导入、iCloud 同步及其状态 | `config export/import/sync/status` |
 | 检查更新、获取新版 | `update check`、`update install`（当前下载版有更新时返回下载地址，需要手动安装） |
 | 快捷键列表、设置组合键、清除与作用范围 | `shortcuts`、`shortcuts set/clear/scope` |
-| 登录启动 | `login status/enable/disable` |
+| 登录启动 | `login status`、`login on/off --yes` |
 | 自动整理状态、暂停、继续、取消当前任务 | `automation status/pause/resume`、`cancel` |
 | 隐藏启动、正常退出 | `start`、`quit` |
 

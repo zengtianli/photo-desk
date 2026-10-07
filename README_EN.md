@@ -122,7 +122,7 @@ photodesk doctor --json                         # engine, data folder, library a
 | Configuration export/import, iCloud sync and status | `config export/import/sync/status` |
 | Check for and obtain an update | `update check`, `update install` (this download edition returns the download URL when newer; install manually) |
 | List, set, clear and scope shortcuts | `shortcuts`, `shortcuts set/clear/scope` |
-| Launch at login | `login status/enable/disable` |
+| Launch at login | `login status`, `login on/off --yes` |
 | Organization status, pause, resume and cancel the current task | `automation status/pause/resume`, `cancel` |
 | Hidden startup and normal exit | `start`, `quit` |
 
