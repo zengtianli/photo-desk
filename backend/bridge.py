@@ -582,8 +582,12 @@ def dispatch(args=None, stdin=None):
     args = sys.argv[1:] if args is None else args
     stdin = sys.stdin if stdin is None else stdin
     if args or stdin.isatty():
-        from photocli.cli import cli, run
         import desk_cli
+        if args and args[0] in desk_cli.APP_VERBS:
+            # The app's own commands (config, update, shortcuts, login, automation, cancel): the app executable
+            # answers; this process only passes the words on and the result back.
+            return desk_cli.app_command(list(args))
+        from photocli.cli import cli, run
         # The agent commands run the app's functions through this module (handle and friends).
         desk_cli.install(cli, sys.modules.get(__name__))
         return run(args or ['--help'])

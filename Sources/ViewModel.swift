@@ -3,9 +3,12 @@ import AppKit
 
 @MainActor
 final class PhotoDeskModel: ObservableObject {
+    /// True only while the app adopts settings that are already stored (a config import, an iCloud sync, a
+    /// `photodesk config` command in another process): it must not store its own reading back over them.
+    var adoptingStored = false
     @Published var preferences: PhotoPreferences {
         didSet {
-            preferences.save()
+            if !adoptingStored { preferences.save() }
             if oldValue.automatic != preferences.automatic || oldValue.includeShared != preferences.includeShared ||
                 oldValue.recognizeContent != preferences.recognizeContent || oldValue.refreshSeconds != preferences.refreshSeconds ||
                 oldValue.batchSize != preferences.batchSize || oldValue.eventHours != preferences.eventHours ||

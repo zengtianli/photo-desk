@@ -313,6 +313,11 @@ class AgentCommands(unittest.TestCase):
         cls.env = {k: v for k, v in os.environ.items() if not k.startswith(('PHOTOCLI_', 'PHOTODESK_'))}
         cls.env.update(PHOTODESK_DEMO_ROOT=str(root), PHOTODESK_DATA_ROOT=str(root / 'state'),
                        PHOTODESK_PREFERENCES_SUITE=f'PhotoDesk.Test.DeskCLI.{os.getpid()}')
+        # The app's own commands (desk_cli.APP_VERBS) are answered by the compiled app executable; scripts/test.sh
+        # builds it and names it here. tests/test_lifecycle_cli.py covers them.
+        cls.native = os.environ.get('PHOTODESK_NATIVE')
+        if cls.native:
+            cls.env['PHOTODESK_NATIVE'] = cls.native
 
     @classmethod
     def tearDownClass(cls):
@@ -332,7 +337,10 @@ class AgentCommands(unittest.TestCase):
 
     def test_01_every_command_has_help(self):
         commands = set(re.findall(r'^  ([a-z][a-z-]*)\s', self.run_cli('--help').stdout, re.M))
+        self.assertLessEqual(set(desk_cli.APP_VERBS), commands)
         for command in sorted(commands):
+            if command in desk_cli.APP_VERBS and not self.native:
+                continue  # from source they need the compiled app executable to answer, --help included
             self.assertEqual(self.run_cli(command, '--help').returncode, 0, command)
         self.assertEqual(self.run_cli('settings', 'set', '--help').returncode, 0)
 

@@ -20,3 +20,4 @@
 - 数据只保存在用户 Application Support/PhotoDesk，qa/、原片、OCR 和含人物信息的测试输出不入 git。
 - 修改 JSON 契约须通过真实 Swift decoder 验证。GUI 需实际窗口与操作检查；不在用户图库无人值守执行写入测试。
 - build.sh 使用总部 Xcode 选择器和图标工厂，产物为自包含 App。提交后最后构建安装，以 git 提交数派生构建号。
+- `photodesk config | update | shortcuts | login | automation | cancel` 属于 App 本身，由 App 可执行文件在创建窗口之前回答（Sources/AgentCommands.swift，PhotoDeskEntry.main 分发），引擎只原样转交（backend/desk_cli.py 的 APP_VERBS）。Sources/Shared/AppLifecycleCLI.swift 是总部逐字节副本，不在本仓改。运行中的 App 采纳别的进程已存好的设置时不回存（PhotoDeskModel.adoptingStored），不要在 onChange 里再加写回。改这条链跑 tests/test_lifecycle_cli.py（scripts/test.sh 与 build.sh 都会跑，全程隔离、不上屏）。

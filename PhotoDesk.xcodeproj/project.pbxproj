@@ -18,6 +18,8 @@
 		C10000000000000000000101 /* AppLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000201 /* AppLifecycle.swift */; };
 		C10000000000000000000102 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000202 /* AppConfiguration.swift */; };
 		C10000000000000000000103 /* AppLifecycleUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000203 /* AppLifecycleUI.swift */; };
+		C10000000000000000000104 /* AppLifecycleCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000204 /* AppLifecycleCLI.swift */; };
+		BF0000000000000000000109 /* AgentCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF0000000000000000000209 /* AgentCommands.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +36,8 @@
 		C10000000000000000000201 /* AppLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/AppLifecycle.swift; sourceTree = "<group>"; };
 		C10000000000000000000202 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/AppConfiguration.swift; sourceTree = "<group>"; };
 		C10000000000000000000203 /* AppLifecycleUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/AppLifecycleUI.swift; sourceTree = "<group>"; };
+		C10000000000000000000204 /* AppLifecycleCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/AppLifecycleCLI.swift; sourceTree = "<group>"; };
+		BF0000000000000000000209 /* AgentCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCommands.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +75,7 @@
 				C10000000000000000000201 /* AppLifecycle.swift */,
 				C10000000000000000000202 /* AppConfiguration.swift */,
 				C10000000000000000000203 /* AppLifecycleUI.swift */,
+				C10000000000000000000204 /* AppLifecycleCLI.swift */,
 				BF0000000000000000000201 /* PhotoDeskApp.swift */,
 				BF0000000000000000000202 /* ContentView.swift */,
 				BF0000000000000000000203 /* ViewModel.swift */,
@@ -78,6 +83,7 @@
 				BF0000000000000000000205 /* Models.swift */,
 				BF0000000000000000000207 /* ProductControls.swift */,
 				BF0000000000000000000208 /* UISelfTest.swift */,
+				BF0000000000000000000209 /* AgentCommands.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -154,6 +160,7 @@
 				C10000000000000000000101 /* AppLifecycle.swift in Sources */,
 				C10000000000000000000102 /* AppConfiguration.swift in Sources */,
 				C10000000000000000000103 /* AppLifecycleUI.swift in Sources */,
+				C10000000000000000000104 /* AppLifecycleCLI.swift in Sources */,
 				BF0000000000000000000101 /* PhotoDeskApp.swift in Sources */,
 				BF0000000000000000000102 /* ContentView.swift in Sources */,
 				BF0000000000000000000103 /* ViewModel.swift in Sources */,
@@ -161,6 +168,7 @@
 				BF0000000000000000000105 /* Models.swift in Sources */,
 				BF0000000000000000000107 /* ProductControls.swift in Sources */,
 				BF0000000000000000000108 /* UISelfTest.swift in Sources */,
+				BF0000000000000000000109 /* AgentCommands.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

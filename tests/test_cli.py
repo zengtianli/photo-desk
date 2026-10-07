@@ -23,6 +23,8 @@ COMMANDS = {
     'progress', 'records', 'refresh', 'settings', 'timeline',
     'classify-plan', 'classify-apply', 'title-plan', 'title-apply', 'triage', 'ocr-scan',
     'backup', 'ocr-extract', 'shared-list', 'dedup-export', 'reconcile',
+    # Answered by the app executable; the engine forwards them (desk_cli.APP_VERBS)
+    'config', 'update', 'shortcuts', 'login', 'automation', 'cancel',
 }
 
 

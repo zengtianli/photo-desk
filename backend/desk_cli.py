@@ -13,8 +13,10 @@ import functools
 import json
 import os
 from pathlib import Path
+import plistlib
 import re
 import shutil
+import subprocess
 import sys
 import uuid
 
@@ -726,6 +728,92 @@ def ocr_scan(limit, confirm, library):
     return plan_then_apply('sensitive', limit, confirm, library)
 
 
+# ---------------- 由 App 可执行文件执行的命令 ----------------
+# These belong to the app itself, not to the photo engine: the「配置与更新…」window's settings, version and release
+# channel, the saved shortcuts and their rules, the system login item, and a running PhotoDesk's own actions. The
+# work is done inside the app executable (Sources/AgentCommands.swift, entered in PhotoDeskEntry.main before any
+# window exists); the words go to it unchanged and its stdout, stderr and exit code come back unchanged. Nothing is
+# parsed or re-implemented here. A running PhotoDesk is not restarted or signalled from here.
+APP_VERBS = ('config', 'update', 'shortcuts', 'login', 'automation', 'cancel')
+# The shared layer waits at most 30 seconds for one sync pass or one release lookup; an import with sync on does both.
+APP_SECONDS = 60
+APP_SUMMARIES = {
+    'config': '配置与更新窗口的配置项：status | export -o <file> | import <file> --yes | sync on|off --yes。',
+    'update': '检查更新：update check（只读）。',
+    'shortcuts': '快捷键：已保存的绑定、作用范围与冲突；scope 改作用范围，clear 清除绑定。',
+    'login': '登录 Mac 时启动：status | on|off --yes。',
+    'automation': '运行中的 PhotoDesk 的自动整理：status | pause | resume。',
+    'cancel': '取消运行中的 PhotoDesk 里进行中的任务（同状态栏“取消”）。',
+}
+
+
+def app_binary():
+    """The app executable that carries these commands: this bundle's own.
+
+    From source there is no bundle; PHOTODESK_NATIVE may name a compiled app executable (the tests do). The frozen
+    engine ignores that variable and only ever runs the executable of the bundle it sits in.
+    """
+    if getattr(sys, 'frozen', False):
+        contents = Path(sys.executable).resolve().parents[2]
+        try:
+            with (contents / 'Info.plist').open('rb') as stream:
+                binary = contents / 'MacOS' / plistlib.load(stream)['CFBundleExecutable']
+        except (OSError, KeyError, ValueError):
+            return None
+        return binary if binary.is_file() else None
+    named = os.environ.get('PHOTODESK_NATIVE')
+    return Path(named) if named and Path(named).is_file() else None
+
+
+def relay(stream, data):
+    """The child's bytes as they are; a text-only stream (in-process tests) gets them decoded."""
+    raw = getattr(stream, 'buffer', None)
+    if raw is None:
+        stream.write(data.decode('utf-8', 'replace'))
+        return
+    stream.flush()
+    raw.write(data)
+    raw.flush()
+
+
+def app_failure(words, code, message):
+    """The forwarding itself failed: the same shape as the app's own failures, which otherwise pass through untouched."""
+    if '--json' in words:
+        command = ' '.join(word for word in words[:2] if not word.startswith('-'))
+        print(json.dumps(dict(ok=False, command=command, error=dict(code=code, message=message)), ensure_ascii=False))
+    else:
+        print('错误：' + message, file=sys.stderr)
+    return 1
+
+
+def app_command(words):
+    """Run `photodesk <APP_VERBS word> …` in the app executable and return its exit code."""
+    binary = app_binary()
+    if binary is None:
+        return app_failure(words, 'app_missing', f'找不到 PhotoDesk 的 App 可执行文件：{words[0]} 由它执行，请从已安装的 PhotoDesk.app 运行 photodesk')
+    try:
+        done = subprocess.run([str(binary), *words], stdin=subprocess.DEVNULL, capture_output=True, timeout=APP_SECONDS)
+    except subprocess.TimeoutExpired:
+        return app_failure(words, 'timeout', f'{APP_SECONDS} 秒内没有结束，已终止；先用读命令读回当前状态，不要直接重发')
+    except OSError as exc:
+        return app_failure(words, 'app_missing', f'无法运行 {binary}：{exc}')
+    if done.returncode < 0:
+        return app_failure(words, 'app_failed', f'App 可执行文件被信号 {-done.returncode} 终止，没有结果；先用读命令读回当前状态')
+    relay(sys.stdout, done.stdout)
+    relay(sys.stderr, done.stderr)
+    return done.returncode
+
+
+def app_stub(name):
+    """Lists the word under Commands and forwards it when click reaches it (e.g. after --config)."""
+    @click.command(name, help=APP_SUMMARIES[name], short_help=APP_SUMMARIES[name], add_help_option=False,
+                   context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
+    @click.pass_context
+    def stub(ctx):
+        raise click.exceptions.Exit(app_command([name, *ctx.args]))
+    return stub
+
+
 COMMANDS = (audit, timeline, refresh, duplicates, photos, plan, plans, plan_show, apply, delete_check,
             records, progress, settings, doctor, classify_plan, title_plan, classify_apply, title_apply,
-            triage, ocr_scan)
+            triage, ocr_scan, *map(app_stub, APP_VERBS))

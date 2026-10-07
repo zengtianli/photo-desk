@@ -77,6 +77,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 enum PhotoDeskEntry {
     @MainActor static func main() {
+        let words = Array(CommandLine.arguments.dropFirst())
+        // `photodesk config | update | shortcuts | login | automation | cancel`: the engine forwards these here
+        // (Sources/AgentCommands.swift). Answered and exited before any NSApplication, scene or window exists.
+        if PhotoCommands.handles(words.first) { exit(PhotoCommands.run(words)) }
+        if words.contains(PhotoLifecycleProbe.flag) { PhotoLifecycleProbe.launch(words) }
         if CommandLine.arguments.contains("--ui-self-test") {
             PhotoDeskUISelfTest.launch()
         } else {
@@ -94,16 +99,12 @@ struct PhotoDeskApp: App {
         let model = PhotoDeskModel()
         _model = StateObject(wrappedValue: model)
         if !PhotoDeskLaunch.background && ProcessInfo.processInfo.environment["PHOTODESK_DEMO_ROOT"] == nil {
-            let config = AppConfiguration(productID: "cyou.tianli.PhotoDesk", defaultsKeys: ["product.preferences.v1", "shortcuts.v1"], defaults: PhotoPreferences.defaults)
-            config.onChange = { [weak model] in
-                guard let model else { return }
-                let restored = PhotoPreferences.load()
-                if restored != model.preferences { model.preferences = restored }
-                model.shortcuts.reload()
-            }
-            configuration = config
-            AppLifecycleUI.install(name: "PhotoDesk", configuration: config, updateSource: .github(repository: "zengtianli/photo-desk"))
+            // Same product, keys, preferences and update source as before, now from the one factory the
+            // `photodesk config` / `photodesk update` commands use; a running window follows those commands.
+            configuration = PhotoLifecycle.installApp(model: model, defaults: PhotoPreferences.defaults)
         } else { configuration = nil }
+        // `photodesk automation …` and `photodesk cancel` reach this running app here.
+        PhotoRemote.serve(model)
         if PhotoDeskLaunch.background { delegate.model = model }
     }
 

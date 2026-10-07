@@ -47,6 +47,12 @@ plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$APP/Contents/Info.plis
 python3 scripts/strip_release.py "$APP"
 codesign --force --deep -s - "$APP"
 codesign --verify --deep --strict "$APP"
+# The app's own commands as shipped (config, update, shortcuts, login, automation, cancel): the frozen engine forwards
+# to this bundle's executable, and a second, windowless start of that executable follows the commands and runs the
+# bundled engine on the synthetic acceptance pictures. Isolated preferences and temporary folders; nothing is
+# installed or shown. A failure stops here, before any install, and the bundle must still verify afterwards.
+PHOTODESK_APP="$APP" uv run python tests/test_lifecycle_cli.py AssembledBundleTests
+codesign --verify --deep --strict "$APP"
 if [[ "${1:-}" != --no-install ]]; then
   python3 scripts/install_app.py "$APP" --name-en "$NAME_EN" \
     --display-name "$DISPLAY_NAME" --bundle-id "$BUNDLE_ID"

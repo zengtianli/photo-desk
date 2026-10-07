@@ -18,6 +18,8 @@ sop:
     commands: [photodesk]
   # 界面功能对照：从 Sources/ 的菜单、按钮、设置与快捷键动作逐项列出；写法见 app 技能 references/agent-cli.md。
   # human 的每一项都列在 photodesk --help 的“仅在窗口中”（tests/test_desk_cli.py 核对）。
+  # config、update、shortcuts、login、automation、cancel 由 App 可执行文件自己执行（Sources/AgentCommands.swift），
+  # 引擎只原样转交；automation、cancel 要 PhotoDesk 在运行，shortcuts 的改动在 PhotoDesk 运行时拒绝。
   agent_cli:
     readback: photodesk doctor
     features:
@@ -36,7 +38,7 @@ sop:
     - name: "查看片段"
       command: "photodesk timeline"
     - name: "暂停自动整理 / 继续自动整理"
-      missing: "命令够不到正在运行的 App 的后台整理；settings set automatic 只在 App 未运行时改启动行为"
+      command: "photodesk automation"
     - name: "全部照片"
       command: "photodesk photos"
     - name: "刷新照片"
@@ -92,9 +94,9 @@ sop:
     - name: "状态栏进度"
       command: "photodesk progress"
     - name: "取消（进行中的任务）"
-      missing: "没有取消命令：命令自己起的任务只能终止进程，App 内正在跑的任务命令够不到"
+      command: "photodesk cancel"
     - name: "导入验收测试图…"
-      missing: "没有命令：经 PhotoKit 向系统图库新建合成测试图只在 App 内"
+      missing: "没有命令：经 PhotoKit 向本人的系统图库新建一张合成测试图，要 App 自己的照片写入授权并真的改动图库，只在 App 内"
     - name: "在“照片”中打开"
       human: "只在窗口里有意义：在“照片”App 里定位显示这张照片"
     - name: "在“照片”中查看"
@@ -116,7 +118,7 @@ sop:
     - name: "打开 PhotoDesk 后自动整理"
       command: "photodesk settings set"
     - name: "登录 Mac 时启动"
-      missing: "没有命令：登录项由 App 进程向系统登记（SMAppService），命令读不到也改不了"
+      command: "photodesk login"
     - name: "默认时间线"
       command: "photodesk settings set"
     - name: "外观"
@@ -146,11 +148,11 @@ sop:
     - name: "录制快捷键"
       human: "要真人按键"
     - name: "已绑定的快捷键与冲突提示"
-      missing: "没有读快捷键的命令"
+      command: "photodesk shortcuts"
     - name: "快捷键作用范围（仅 PhotoDesk 内 / 全局）"
-      missing: "没有改快捷键的命令"
+      command: "photodesk shortcuts scope"
     - name: "清除绑定 / 清除所有快捷键"
-      missing: "没有清除快捷键的命令"
+      command: "photodesk shortcuts clear"
     - name: "版本与构建"
       command: "photodesk doctor"
     - name: "原生操作说明"
@@ -162,15 +164,17 @@ sop:
     - name: "配置与更新…"
       human: "只在窗口里有意义：打开配置与更新窗口"
     - name: "使用 iCloud 记住配置"
-      missing: "共享生命周期模块暂无命令入口"
+      command: "photodesk config sync"
+    - name: "iCloud 配置同步状态（开关下面那句实时状态）"
+      missing: "读不到的展示：这句话由运行中的 App 持有，命令只在自己执行 config sync on 或 config import 时回报那一次同步的结果"
     - name: "导出配置…"
-      missing: "共享生命周期模块暂无命令入口"
+      command: "photodesk config export"
     - name: "导入配置…"
-      missing: "共享生命周期模块暂无命令入口"
+      command: "photodesk config import"
     - name: "检查更新"
-      missing: "共享生命周期模块暂无命令入口"
+      command: "photodesk update check"
     - name: "升级到新版…"
-      missing: "共享生命周期模块暂无命令入口"
+      missing: "命令不做静默安装（做得到，只是不做）：photodesk update check 给出新版、按钮名、安装包地址与步骤，替换并重启 App 仍在「配置与更新…」窗口确认"
   measure:
     archive: release
   budget:
