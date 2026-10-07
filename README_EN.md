@@ -21,7 +21,7 @@ Read the local [getting-started guide and captioned demos (Chinese)](docs/demo/t
 
 Native SwiftUI window with no HTTP server. Photo analysis runs in a bundled Python engine packaged with PyInstaller, which accounts for most of the app's size; it runs as a subprocess and exits when done. While the app is open it checks every 60 seconds, read-only, only the photo data the engine actually uses, so system analysis and search-index writes do not count as changes. If nothing relevant changed, the engine does not start; if it did, the timeline is rebuilt, and when the result matches what is already on screen nothing is rewritten or redrawn. Back-to-back batches of 12 photos run only during the first content recognition pass.
 
-<sub>v1.0.1 (50) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,393 items (2,722 timeline segments) · measured 2026-10-01. Historical measurements on the listed device, not new measurements of 1.0.3. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.0.1 (50) · Mac16,12 / Apple M4 / macOS 27.2 · Real photo library with 6,393 items (2,722 timeline segments) · measured 2026-10-01. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## Usage
