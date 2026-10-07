@@ -582,14 +582,65 @@ def settings_set(key, value):
 settings.add_command(settings_set)
 
 
+# The system's grants, as the app executable reads them (Sources/AgentCommands.swift, PhotoAccess): preflights only,
+# never a prompt, and “照片” is never started. `photos` is PhotoDesk.app's own grant: the executable reads it as its
+# own responsible program, because a command typed in a terminal would otherwise be told the terminal's grant.
+PHOTOS_ACCESS = {
+    'authorized': (True, 'PhotoDesk 已获准访问照片图库（App 内删除照片、导入验收测试图要用）'),
+    'limited': (True, 'PhotoDesk 只获准访问所选的照片；App 内删除、导入验收测试图可能受限'),
+    'denied': (False, '已拒绝：在系统设置 → 隐私与安全性 → 照片 里允许 PhotoDesk（须本人操作）'),
+    'restricted': (False, '受系统限制（描述文件或家长控制），PhotoDesk 不能访问照片图库'),
+    'not_determined': (False, '还没有授权过：第一次在 PhotoDesk 里删除照片或导入验收测试图时系统会询问（须本人点允许）'),
+}
+PHOTOS_AUTOMATION = {
+    'allowed': (True, '已允许当前终端控制“照片”（apply --confirm 写入要用）'),
+    'denied': (False, '已拒绝：在系统设置 → 隐私与安全性 → 自动化 里允许当前终端控制“照片”（须本人操作）'),
+    'not_asked': (False, '还没有授权过：首次 apply --confirm 时系统会询问是否允许终端控制“照片”（须本人点允许）'),
+    'target_not_running': (None, '未检查：“照片”没有在运行，系统只对运行中的目标回答；打开“照片”后再读'),
+}
+
+
+def app_permissions():
+    """The app executable's reading of the system's grants; None when it cannot be asked."""
+    binary = app_binary()
+    if binary is None:
+        return None
+    try:
+        done = subprocess.run([str(binary), '--permissions-probe'], stdin=subprocess.DEVNULL, capture_output=True, timeout=20)
+        data = json.loads(done.stdout) if done.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def permission_checks(grants):
+    """(name, ok, detail) for doctor. ok None: not read, said as such; never a guess."""
+    if grants is None:
+        unread = '未检查：找不到 PhotoDesk 的 App 可执行文件（授权由它读取），请从已安装的 PhotoDesk.app 运行 photodesk'
+        return [('photos_access', None, unread), ('photos_automation', None, unread)]
+    photos = grants.get('photos') or {}
+    if photos.get('status') in PHOTOS_ACCESS and photos.get('own_identity') is True:
+        access = ('photos_access', *PHOTOS_ACCESS[photos['status']])
+    elif photos.get('status') in PHOTOS_ACCESS:
+        # A reading that is not PhotoDesk's own (it would be the terminal's) is not passed off as PhotoDesk's.
+        access = ('photos_access', None, '未检查：这次读到的不是 PhotoDesk.app 自己的授权（系统按启动它的程序记授权）；从程序坞或访达打开 PhotoDesk 后再读')
+    else:
+        access = ('photos_access', None, '未检查：没有读到 PhotoDesk 的“照片”授权状态')
+    caller = (grants.get('automation') or {}).get('caller') or {}
+    ok, detail = PHOTOS_AUTOMATION.get(caller.get('state'), (None, f"未检查：系统没有给出可判断的回答（{caller.get('state')}，代码 {caller.get('code')}）"))
+    return [access, ('photos_automation', ok, detail)]
+
+
 @agent('doctor')
 @click.option('--ocr', 'ocr_check', is_flag=True, help='再用内置合成样本核对本机 OCR（写 diagnostics/ocr-probe.png）')
 @library_option
 def doctor(ocr_check, library):
-    """诊断：引擎版本、数据目录、图库能否读取（完全磁盘访问）、App 是否运行、时间线缓存；--ocr 核对 OCR。
+    """诊断：引擎版本、数据目录、图库能否读取（完全磁盘访问）、App 是否运行、时间线缓存、照片与自动化授权；--ocr 核对 OCR。
 
-    只读，--ocr 例外：它写一张合成样本图 diagnostics/ocr-probe.png。说明类检查（app_running、
-    photos_automation）的 ok 为 null：只报告情况，不代表已验证。
+    只读，--ocr 例外：它写一张合成样本图 diagnostics/ocr-probe.png。photos_access 是 PhotoDesk.app 的
+    “照片”授权（App 内删除照片、导入验收测试图要用），photos_automation 是当前终端控制“照片”的
+    “自动化”授权（apply --confirm 要用）：都只读系统现有的授权，不询问、不弹窗、不启动“照片”。
+    ok 为 null 的检查只报告情况，不代表已验证（app_running；读不到授权时的这两项）。
     """
     import preferences
     from photocli.cli import app_version
@@ -628,7 +679,9 @@ def doctor(ocr_check, library):
         check('timeline_cache', True, f"生成于 {data['generated']}，待识别 {data['pending']}", required=False)
     except ValueError as exc:
         check('timeline_cache', False, str(exc), required=False)
-    check('photos_automation', None, '未检查：首次 apply --confirm 时系统会询问是否允许终端控制“照片”', required=False)
+    grants = app_permissions()
+    for name, ok, detail in permission_checks(grants):
+        check(name, ok, detail, required=False)
     if ocr_check:
         try:
             check('ocr', True, engine().handle({'command': 'ocr-probe'})['message'])
@@ -636,7 +689,9 @@ def doctor(ocr_check, library):
             check('ocr', False, friendly(exc))
     ok = all(c['ok'] is True for c in checks if c['required'])
     lines = [f"{'·' if c['ok'] is None else '✓' if c['ok'] else '✗'} {c['name']}：{c['detail']}" for c in checks]
-    return dict(ok=ok, app_running=running, checks=checks), lines
+    permissions = dict(photos_access=((grants or {}).get('photos') or {}).get('status'),
+                       photos_automation=(((grants or {}).get('automation') or {}).get('caller') or {}).get('state'))
+    return dict(ok=ok, app_running=running, permissions=permissions, checks=checks), lines
 
 
 # ---------------- 旧命令名：同一流程的别名 ----------------
@@ -734,16 +789,22 @@ def ocr_scan(limit, confirm, library):
 # work is done inside the app executable (Sources/AgentCommands.swift, entered in PhotoDeskEntry.main before any
 # window exists); the words go to it unchanged and its stdout, stderr and exit code come back unchanged. Nothing is
 # parsed or re-implemented here. A running PhotoDesk is not restarted or signalled from here.
-APP_VERBS = ('config', 'update', 'shortcuts', 'login', 'automation', 'cancel')
+APP_VERBS = ('config', 'update', 'shortcuts', 'login', 'automation', 'cancel', 'start', 'quit')
 # The shared layer waits at most 30 seconds for one sync pass or one release lookup; an import with sync on does both.
 APP_SECONDS = 60
+# `update install` downloads, verifies and replaces the app: the shared layer allows 330 seconds for the download and
+# its verification, 20 for a running app to quit and 330 for the replacement. Cutting it off here would leave an
+# upgrade half told, so this only catches a child that never ends.
+INSTALL_SECONDS = 900
 APP_SUMMARIES = {
     'config': '配置与更新窗口的配置项：status | export -o <file> | import <file> --yes | sync on|off --yes。',
-    'update': '检查更新：update check（只读）。',
-    'shortcuts': '快捷键：已保存的绑定、作用范围与冲突；scope 改作用范围，clear 清除绑定。',
+    'update': '检查更新与升级：update check（只读）| update install --yes。',
+    'shortcuts': '快捷键：已保存的绑定、作用范围与冲突；set 设组合键，scope 改作用范围，clear 清除绑定。',
     'login': '登录 Mac 时启动：status | on|off --yes。',
     'automation': '运行中的 PhotoDesk 的自动整理：status | pause | resume。',
     'cancel': '取消运行中的 PhotoDesk 里进行中的任务（同状态栏“取消”）。',
+    'start': '在后台启动 PhotoDesk：不激活、窗口不显示。',
+    'quit': '退出运行中的 PhotoDesk（同 ⌘Q）。',
 }
 
 
@@ -791,10 +852,11 @@ def app_command(words):
     binary = app_binary()
     if binary is None:
         return app_failure(words, 'app_missing', f'找不到 PhotoDesk 的 App 可执行文件：{words[0]} 由它执行，请从已安装的 PhotoDesk.app 运行 photodesk')
+    seconds = INSTALL_SECONDS if [word for word in words if not word.startswith('-')][:2] == ['update', 'install'] else APP_SECONDS
     try:
-        done = subprocess.run([str(binary), *words], stdin=subprocess.DEVNULL, capture_output=True, timeout=APP_SECONDS)
+        done = subprocess.run([str(binary), *words], stdin=subprocess.DEVNULL, capture_output=True, timeout=seconds)
     except subprocess.TimeoutExpired:
-        return app_failure(words, 'timeout', f'{APP_SECONDS} 秒内没有结束，已终止；先用读命令读回当前状态，不要直接重发')
+        return app_failure(words, 'timeout', f'{seconds} 秒内没有结束，已终止；先用读命令读回当前状态，不要直接重发')
     except OSError as exc:
         return app_failure(words, 'app_missing', f'无法运行 {binary}：{exc}')
     if done.returncode < 0:

@@ -20,4 +20,6 @@
 - 数据只保存在用户 Application Support/PhotoDesk，qa/、原片、OCR 和含人物信息的测试输出不入 git。
 - 修改 JSON 契约须通过真实 Swift decoder 验证。GUI 需实际窗口与操作检查；不在用户图库无人值守执行写入测试。
 - build.sh 使用总部 Xcode 选择器和图标工厂，产物为自包含 App。提交后最后构建安装，以 git 提交数派生构建号。
-- `photodesk config | update | shortcuts | login | automation | cancel` 属于 App 本身，由 App 可执行文件在创建窗口之前回答（Sources/AgentCommands.swift，PhotoDeskEntry.main 分发），引擎只原样转交（backend/desk_cli.py 的 APP_VERBS）。Sources/Shared/AppLifecycleCLI.swift 是总部逐字节副本，不在本仓改。运行中的 App 采纳别的进程已存好的设置时不回存（PhotoDeskModel.adoptingStored），不要在 onChange 里再加写回。改这条链跑 tests/test_lifecycle_cli.py（scripts/test.sh 与 build.sh 都会跑，全程隔离、不上屏）。
+- `photodesk config | update | shortcuts | login | automation | cancel | start | quit` 属于 App 本身，由 App 可执行文件在创建窗口之前回答（Sources/AgentCommands.swift，PhotoDeskEntry.main 分发），引擎只原样转交（backend/desk_cli.py 的 APP_VERBS）。Sources/Shared/ 下四份生命周期文件是总部逐字节副本，不在本仓改。运行中的 App 采纳别的进程已存好的设置时不回存（PhotoDeskModel.adoptingStored），不要在 onChange 里再加写回。改这条链跑 tests/test_lifecycle_cli.py（scripts/test.sh 与 build.sh 都会跑，全程隔离、不上屏）。
+- `photodesk doctor` 的 photos_access、photos_automation 两行由 App 可执行文件读（`--permissions-probe`，AgentCommands.swift 的 PhotoAccess）：只用不会询问的预检（PHPhotoLibrary.authorizationStatus、askUserIfNeeded 为 false 的 AEDeterminePermissionToAutomateTarget），不加 requestAuthorization，不启动“照片”。系统按“负责的程序”记授权，所以它把自己再起一份、以自己为负责程序去读；读到的不是 PhotoDesk 自己的就报“未检查”，不冒充通过。
+- `photodesk start` 经系统隐藏启动、不激活；`photodesk quit` 由运行中的 App 自己走 ⌘Q 那条路。带隔离或演示环境变量时，只有完整的隔离运行（PHOTODESK_BACKGROUND、带标记的合成图库、PhotoDesk.Test.* 偏好域）才启动，其余一律拒绝；测试只在换了 bundle id、带 LSUIElement 的临时包上真的启动，不对装机版和构建产物启动。

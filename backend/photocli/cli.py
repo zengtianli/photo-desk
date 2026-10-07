@@ -25,18 +25,18 @@ def app_version():
     return __version__
 
 
-# The shared lifecycle layer's own help lines for `photodesk` (AppLifecycleCLI.helpRead / helpWrite / helpWindowOnly /
-# helpNoCommand), verbatim. tests/test_lifecycle_cli.py looks each of them up in what the compiled app prints for
-# `config --help`, so the two cannot drift.
+# The shared lifecycle layer's own help lines for `photodesk` (AppLifecycleCLI.helpRead / helpWrite / helpWindowOnly),
+# verbatim. tests/test_lifecycle_cli.py looks each of them up in what the compiled app prints for `config --help`, so
+# the two cannot drift.
 LIFECYCLE_READS = (
-    '  config status              「使用 iCloud 记住配置」开关、当前可迁移的配置项、App 是否在运行（只读）',
+    '  config status              「使用 iCloud 记住配置」开关、开关下面那句同步状态、当前可迁移的配置项、App 是否在运行（只读）',
     '  update check               检查更新：当前版本、此渠道最新版本、有没有新版、怎么升级（只读；私有渠道读 iCloud Drive 里的发行记录，公开渠道联网读发行记录）')
 LIFECYCLE_WRITES = (
     '  config export -o <file>        导出配置：与窗口「导出配置…」同一份文件；不改设置，只写你指定的那个文件（--force 覆盖；-o - 输出到标准输出，不写文件）',
     '  config import <file> --yes     导入配置：先备份原配置再覆盖，与窗口「导入配置…」相同',
-    '  config sync on|off --yes       拨动「使用 iCloud 记住配置」（--dry-run 只看会不会变；用 photodesk config status 回读）')
+    '  config sync on|off --yes       拨动「使用 iCloud 记住配置」（--dry-run 只看会不会变；用 photodesk config status 回读）',
+    '  update install --yes           升级到新版：与窗口「升级到新版…」同一条路——验证发行包与签名、替换当前 App，运行中的先退出、换好再重开；配置保留，替换失败回滚（--dry-run 只看会做什么；用 photodesk update check 回读）')
 LIFECYCLE_WINDOW_ONLY = '打开「配置与更新…」窗口'
-LIFECYCLE_NO_COMMAND = '升级到新版 / 下载新版（命令不做静默安装：update check 给出新版、按钮名、安装包地址与步骤，替换并重启 App 仍在「配置与更新…」窗口确认）'
 
 HELP = """PhotoDesk · 照片台命令行：与 App 同一引擎、同一份时间线、计划、记录与设置。
 
@@ -46,7 +46,8 @@ HELP = """PhotoDesk · 照片台命令行：与 App 同一引擎、同一份时�
 
 \b
 读命令（不改“照片”，不改 PhotoDesk 的数据）：
-  doctor 读回当前状态：版本、数据目录、图库能否读取、App 是否运行、时间线缓存
+  doctor 读回当前状态：版本、数据目录、图库能否读取、App 是否运行、时间线缓存、
+         照片与自动化授权是否到位（只读系统现有授权，不询问、不弹窗）
   timeline duplicates photos audit plans plan-show records progress
   settings delete-check reconcile
   shortcuts                  已保存的快捷键、作用范围与冲突提示（同设置窗口“快捷键”页）
@@ -58,18 +59,21 @@ HELP = """PhotoDesk · 照片台命令行：与 App 同一引擎、同一份时�
   settings set    改 App 设置；PhotoDesk 运行时拒绝，改后用 settings 读回
   apply           加 --confirm 才写入“照片”，不加只预检；写后用 records 读回
   backup ocr-extract shared-list dedup-export    只写各自的导出文件
+  shortcuts set <动作> <组合键> [application|global]   给动作设一个组合键（窗口里是按键录制，这里写出来，如 ctrl+opt+p）；PhotoDesk 运行时拒绝，改后用 shortcuts 读回
   shortcuts scope <动作> application|global      改已有快捷键的作用范围；PhotoDesk 运行时拒绝，改后用 shortcuts 读回
   shortcuts clear <动作> | clear --all           清除一个动作的绑定 / 清除所有快捷键；PhotoDesk 运行时拒绝
   login on|off --yes         拨动“登录 Mac 时启动”（--dry-run 只看会不会变；用 login status 读回）
   automation pause|resume    暂停 / 继续运行中的 PhotoDesk 的自动整理（只改这一次运行，不改设置；用 automation status 读回）
   cancel                     取消运行中的 PhotoDesk 里进行中的任务（同状态栏“取消”；正在写入图库时不能取消）
+  start                      在后台启动 PhotoDesk：不激活、窗口不显示（Dock 里会有图标）；已在运行时不再启动。用 automation status 读回
+  quit                       退出运行中的 PhotoDesk（同 ⌘Q；正在写入图库时不退出）。settings set、shortcuts set|scope|clear 要它不在运行
 @LIFECYCLE_WRITES@
 
 \b
 --json 输出（stdout，一个 JSON 对象）：
   成功 {"ok": true, "command": "<命令>", ...}
   失败 {"ok": false, "command": "<命令或 null>", "error": "原因"}
-  config、update、shortcuts、login、automation、cancel 由 PhotoDesk.app 自己执行（引擎原样转交），失败时 error 是对象：
+  config、update、shortcuts、login、automation、cancel、start、quit 由 PhotoDesk.app 自己执行（引擎原样转交），失败时 error 是对象：
   失败 {"ok": false, "command": "<命令>", "error": {"code": "<短码>", "message": "原因"}}；各自的 --help 列出字段与短码
   backup、ocr-extract 没有 --json，只输出文本进度。
 
@@ -77,25 +81,23 @@ HELP = """PhotoDesk · 照片台命令行：与 App 同一引擎、同一份时�
 退出码：
   0  成功（查无结果也算成功）
   1  失败：操作失败、参数或用法错误、权限不足；doctor 的必需项未通过也是 1
-  2  用法错误或缺确认参数：只有 config、update、shortcuts、login、automation、cancel 这六个用 2
+  2  用法错误或缺确认参数：只有 config、update、shortcuts、login、automation、cancel、start、quit 这八个用 2
      （error.code 为 usage、confirmation_required、file_exists），其余命令的用法错误仍是 1
 
 \b
 仅在窗口中：
   确认删除（产品规定删除只在 App 内，PhotoKit 的系统确认须真人点；命令止于 delete-check）
   完全磁盘访问权限、照片访问权限（系统授权须真人在系统设置里开；是否到位用 doctor 读）
-  录制快捷键（要真人按键）
+  录制快捷键（要真人按键；把组合键写出来设置用 shortcuts set）
   上一张 / 下一张 / 关闭预览、显示主窗口、错误提示的收起、原生操作说明
   在“照片”中打开、在“照片”中查看、打开本地记录、在 Finder 显示 App
   PhotoDesk 安装与使用教程、@LIFECYCLE_WINDOW_ONLY@
 
 \b
 暂无命令：
-  导入验收测试图…（经 PhotoKit 向系统图库新建一张合成测试图，要 App 自己的照片写入授权，只在 App 内）
-  @LIFECYCLE_NO_COMMAND@
-  iCloud 配置同步的实时状态那句话（由运行中的 App 持有；config sync on、config import 只回报它自己那一次同步的结果）
+  导入验收测试图…（向本人的系统照片图库新建一张合成测试图；删除它只能本人在窗口里确认，命令建得出、删不掉，没有给命令）
 """.replace('@LIFECYCLE_READS@', '\n'.join(LIFECYCLE_READS)).replace('@LIFECYCLE_WRITES@', '\n'.join(LIFECYCLE_WRITES)) \
-    .replace('@LIFECYCLE_WINDOW_ONLY@', LIFECYCLE_WINDOW_ONLY).replace('@LIFECYCLE_NO_COMMAND@', LIFECYCLE_NO_COMMAND)
+    .replace('@LIFECYCLE_WINDOW_ONLY@', LIFECYCLE_WINDOW_ONLY)
 
 
 @click.group(name='photodesk', help=HELP)

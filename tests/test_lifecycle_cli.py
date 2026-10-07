@@ -1,6 +1,6 @@
-"""`photodesk config | update | shortcuts | login | automation | cancel`, end to end and off screen.
+"""`photodesk config | update | shortcuts | login | automation | cancel | start | quit`, end to end and off screen.
 
-The command line is the Python engine; these six words belong to the app bundle (the「配置与更新…」window's
+The command line is the Python engine; these eight words belong to the app bundle (the「配置与更新…」window's
 settings, version and release channel, the saved shortcuts, the system login item, a running PhotoDesk's own
 actions). So the engine forwards them to the compiled app executable, which answers in Sources/AgentCommands.swift
 before any NSApplication exists. This test drives that chain as real processes:
@@ -11,7 +11,11 @@ before any NSApplication exists. This test drives that chain as real processes:
    back and an import while sync is on: the executable is started a second time as the app itself
    (`--lifecycle-follow-probe`: the real model and the production wiring, activation policy prohibited, the shared
    window built but never ordered in) and every verdict reads the stored value with a fresh process;
-4. that running app answers `automation pause | resume` and `cancel`.
+4. that running app answers `automation pause | resume` and `cancel`;
+5. `start` really starts the throwaway bundle through the system, hidden and not activated (no window reaches the
+   screen, the front app stays the front app), and `quit` ends it;
+6. `update install` looks the release up and replaces nothing here, and `--permissions-probe` reads the system's
+   grants without asking for any.
 
 Everything is isolated: a copy of the executable inside a throwaway bundle with a test bundle identifier, a
 PhotoDesk.Test.* preferences domain, temporary support and "cloud" directories, a private notification channel, a
@@ -30,6 +34,7 @@ import os
 from pathlib import Path
 import plistlib
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -57,6 +62,33 @@ CONTROL_OPTION = 4096 | 2048  # Carbon controlKey | optionKey
 
 def chord(code, key, scope='application', modifiers=CONTROL_OPTION):
     return {'chord': {'code': code, 'modifiers': modifiers, 'key': key}, 'scope': scope}
+
+
+def windows_on_screen(pid):
+    """The window server's own list of what is ordered in, for one process (owner and bounds need no permission)."""
+    import Quartz
+    rows = Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID) or []
+    return [dict(row) for row in rows if row.get('kCGWindowOwnerPID') == pid]
+
+
+def front_pid():
+    """The process that has the keyboard, as fresh processes read it from the system; None when it cannot be told."""
+    front = subprocess.run(['/usr/bin/lsappinfo', 'front'], capture_output=True, text=True, timeout=30).stdout.strip()
+    if not front:
+        return None
+    told = subprocess.run(['/usr/bin/lsappinfo', 'info', '-only', 'pid', front], capture_output=True, text=True, timeout=30).stdout
+    digits = ''.join(ch for ch in told.split('=')[-1] if ch.isdigit())
+    return int(digits) if digits else None
+
+
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 class Chain(unittest.TestCase):
@@ -194,6 +226,15 @@ class Chain(unittest.TestCase):
                 time.sleep(0.05)
             return True
 
+        def told_by_app(seconds=10.0):
+            deadline = time.monotonic() + seconds
+            while time.monotonic() < deadline:
+                showing, told = seen()['status'], self.call('config', 'status', env=live)['sync_status']
+                if told['live'] is True and told['from'] == 'app' and told['text'] == showing and told['at']:
+                    return True
+                time.sleep(0.1)
+            return False
+
         first = seen()
         # The app is running as an app, and nothing of it is on screen.
         self.assertEqual((first['policy_prohibited'], first['windows_on_screen']), (True, 0))
@@ -204,6 +245,9 @@ class Chain(unittest.TestCase):
             self.assertTrue(on['changed'] and on['app_running'], on)  # the command saw the running app
             self.assertTrue(reaches(lambda s: s['enabled'] is True and s['window_switch'] is True and s['status'] != OFF), f'follows sync on ({attempt + 1})')
             self.assertTrue(holds(True), f'sync on is not written back ({attempt + 1})')
+            if attempt == 0:
+                # 开关下面那句话: while the app runs, `config status` tells the sentence the app itself is showing.
+                self.assertTrue(told_by_app(), (seen()['status'], self.call('config', 'status', env=live)['sync_status']))
             self.call('config', 'sync', 'off', '--yes', env=live)
             self.assertTrue(reaches(lambda s: s['enabled'] is False and s['window_switch'] is False and s['status'] == OFF), f'follows sync off ({attempt + 1})')
             self.assertTrue(holds(False), f'sync off is not written back ({attempt + 1})')
@@ -264,6 +308,7 @@ class Chain(unittest.TestCase):
         listed = self.call('shortcuts', env=live)
         self.assertTrue(listed['app_running'] and listed['bound'] == 1, listed)
         self.assertEqual(self.call('shortcuts', 'clear', '--all', expect=1, env=live)['error']['code'], 'app_running')
+        self.assertEqual(self.call('shortcuts', 'set', 'pause', 'ctrl+opt+p', expect=1, env=live)['error']['code'], 'app_running')
         self.assertEqual(self.stored(SHORTCUTS), {'search': chord(3, 'F')})
         last = seen()
         self.assertEqual((last['policy_prohibited'], last['windows_on_screen']), (True, 0))
@@ -302,12 +347,19 @@ class LifecycleCommandTests(Chain):
         for line in photocli.LIFECYCLE_READS + photocli.LIFECYCLE_WRITES:
             self.assertIn(line + '\n', shared.stdout)       # the engine's copy of the line is the shared layer's line
             self.assertIn('\n  ' + line + '\n', top)         # and it is listed in `photodesk --help`
-        self.assertIn('暂无命令：' + photocli.LIFECYCLE_NO_COMMAND + '\n', shared.stdout)
         self.assertIn('仅在窗口中：' + photocli.LIFECYCLE_WINDOW_ONLY + '\n', shared.stdout)
+        # The upgrade and the sentence under the switch have commands now (update install, config status): the shared
+        # help keeps no 暂无命令 line, and the product's own 暂无命令 list no longer names either of them.
+        self.assertNotIn('暂无命令', shared.stdout)
+        self.assertTrue(any(line.startswith('  update install ') for line in photocli.LIFECYCLE_WRITES))
+        self.assertIn('同步状态', photocli.LIFECYCLE_READS[0])
         window_only, no_command = top.split('仅在窗口中：')[1].split('暂无命令：')
+        no_command = no_command.split('\n\nOptions:')[0]   # the 暂无命令 list itself, not the command summaries after it
         self.assertIn(photocli.LIFECYCLE_WINDOW_ONLY, window_only)
         self.assertNotIn('升级到新版', window_only)
-        self.assertIn(photocli.LIFECYCLE_NO_COMMAND, no_command)
+        self.assertIn('导入验收测试图', no_command)
+        for word in ('升级', '同步', 'update', 'config'):
+            self.assertNotIn(word, no_command)
         self.assertIn('退出码', shared.stdout)
         for verb in desk_cli.APP_VERBS:
             ours, theirs = self.photodesk(verb, '--help'), self.direct(verb, '--help')
@@ -334,7 +386,16 @@ class LifecycleCommandTests(Chain):
                  (('login', 'status', '--no-such', '--json'), 2),
                  (('automation', '--json'), 0), (('automation', 'status'), 0), (('automation', 'stop', '--json'), 2),
                  (('automation', 'pause', '--json'), 1), (('automation', 'resume'), 1),
-                 (('cancel', '--json'), 0), (('cancel',), 0), (('cancel', 'now', '--json'), 2), (('cancel', '--no-such'), 2))
+                 (('cancel', '--json'), 0), (('cancel',), 0), (('cancel', 'now', '--json'), 2), (('cancel', '--no-such'), 2),
+                 # `update install`: a wrong word is a usage error before anything is looked up.
+                 (('update', 'install', '--no-such', '--json'), 2), (('update', 'install', 'extra', '--json'), 2),
+                 (('shortcuts', 'set', '--json'), 2), (('shortcuts', 'set', 'pause', '--json'), 2),
+                 (('shortcuts', 'set', 'nosuch', 'ctrl+opt+p', '--json'), 2), (('shortcuts', 'set', 'pause', 'hyper+p', '--json'), 2),
+                 (('shortcuts', 'set', 'pause', 'ctrl+opt+p', 'everywhere', '--json'), 2), (('shortcuts', 'set', 'pause', 'p', '--json'), 1),
+                 (('shortcuts', 'set', 'search', 'ctrl+opt+f', 'global'), 1),
+                 # No app is running and this run is not the complete isolated one: `start` refuses, `quit` has nothing to end.
+                 (('start', '--json'), 1), (('start',), 1), (('start', 'now', '--json'), 2), (('start', '--no-such'), 2),
+                 (('quit', '--json'), 0), (('quit',), 0), (('quit', 'now', '--json'), 2), (('quit', '--no-such'), 2))
         for words, code in cases:
             ours, theirs = self.photodesk(*words), self.direct(*words)
             self.assertEqual((ours.returncode, ours.stdout, ours.stderr), (theirs.returncode, theirs.stdout, theirs.stderr), words)
@@ -350,8 +411,14 @@ class LifecycleCommandTests(Chain):
                 self.assertTrue(ours.stderr.strip())
         for words, code in ((('config', 'bogus'), 'usage'), (('config', 'status', '--no-such'), 'usage'),
                             (('config', 'sync', 'on'), 'confirmation_required'), (('shortcuts', '--no-such'), 'usage'),
-                            (('login', 'on'), 'confirmation_required'), (('cancel', 'now'), 'usage')):
+                            (('login', 'on'), 'confirmation_required'), (('cancel', 'now'), 'usage'),
+                            (('update', 'install', '--no-such'), 'usage'), (('shortcuts', 'set', 'pause', 'hyper+p'), 'usage'),
+                            (('start', 'now'), 'usage'), (('quit', 'now'), 'usage')):
             self.assertEqual(self.call(*words, expect=2)['error']['code'], code, words)
+        self.assertEqual(self.call('shortcuts', 'set', 'pause', 'p', expect=1)['error']['code'], 'rejected')
+        self.assertEqual(self.call('start', expect=1)['error']['code'], 'isolation_incomplete')
+        nothing = self.call('quit')
+        self.assertEqual((nothing['command'], nothing['quit'], nothing['app_running']), ('quit', False, False))
         # The login item is the system's: an isolated run reads it and never changes it.
         self.assertEqual(self.call('login', 'on', '--yes', expect=1)['error']['code'], 'isolated_run')
         dry = self.call('login', 'on', '--dry-run')
@@ -370,6 +437,9 @@ class LifecycleCommandTests(Chain):
         status = self.call('config', 'status')
         self.assertEqual((status['command'], status['has_settings'], status['sync_enabled'], status['problem']), ('config status', True, False, None))
         self.assertEqual(status['keys'], ['defaults.' + KEY])
+        # 开关下面那句话: nothing has synced and no app is running, so it is what a window would open with.
+        self.assertEqual(status['sync_status'], {'text': OFF, 'at': None, 'from': 'derived', 'live': False})
+        self.assertIn('同步状态：' + OFF, self.photodesk('config', 'status').stdout)
         self.assertFalse(self.support.exists() or self.cloud.exists())  # reading writes nothing
         self.store(SHORTCUTS, {'pause': chord(35, 'P')})
         self.assertEqual(self.call('config', 'status')['keys'], ['defaults.' + KEY, 'defaults.' + SHORTCUTS])
@@ -407,8 +477,14 @@ class LifecycleCommandTests(Chain):
         on = self.call('config', 'sync', 'on', '--yes')
         self.assertEqual((on['changed'], on['sync_enabled'], on['check_with'], self.mirrored()), (True, True, 'photodesk config status', changed))
         self.assertTrue(self.call('config', 'status')['sync_enabled'])
+        # No app is running: the sentence is the one this command's own sync pass left behind, with its time.
+        left = self.call('config', 'status')['sync_status']
+        self.assertEqual((left['from'], left['live'], left['text']), ('record', False, on['status']))
+        self.assertTrue(left['at'] and left['text'] != OFF, left)
         self.assertIs(self.call('config', 'sync', 'on', '--yes')['changed'], False)
         self.assertIs(self.call('config', 'sync', 'off', '--yes')['sync_enabled'], False)
+        closed = self.call('config', 'status')['sync_status']
+        self.assertEqual((closed['text'], closed['live']), (OFF, False))
 
     @unittest.skipIf(os.environ.get('PHOTODESK_TEST_OFFLINE') == '1', 'PHOTODESK_TEST_OFFLINE=1')
     def test_update_check_asks_the_public_release_record_and_installs_nothing(self):
@@ -470,6 +546,166 @@ class LifecycleCommandTests(Chain):
         subprocess.run(['/usr/bin/defaults', 'write', self.suite, SHORTCUTS, '-data', b'not json'.hex()], check=True, capture_output=True, timeout=30)
         self.assertIn('无法读取', self.call('shortcuts')['load_error'])
 
+    @unittest.skipIf(os.environ.get('PHOTODESK_TEST_OFFLINE') == '1', 'PHOTODESK_TEST_OFFLINE=1')
+    def test_update_install_looks_the_release_up_and_replaces_nothing_here(self):
+        """`update install` is the window's 升级到新版… / 下载新版…. The throwaway bundle (1.2 build 7) is ahead of the
+        public record: nothing to install, with --yes as without. An older throwaway bundle sees the newer public
+        release; PhotoDesk carries no developer identity, so the window's button there is 下载新版… and the command says
+        the same (manual_install, with the package address). Nothing is downloaded or replaced in either case."""
+        def tree(app):
+            return sorted((str(f.relative_to(app)), f.stat().st_size, f.stat().st_mtime_ns) for f in app.rglob('*') if f.is_file())
+
+        app = self.binary.parents[2]
+        before = tree(app)
+        current, source = {'version': '1.2', 'build': '7'}, {'kind': 'github', 'repository': 'zengtianli/photo-desk'}
+        for words in (('--yes',), ('--dry-run',), ()):
+            done = self.photodesk('update', 'install', *words, '--json')
+            body = json.loads(done.stdout)
+            self.assertEqual((body['command'], body['current'], body['source']), ('update install', current, source))
+            if done.returncode:
+                # The release record could not be read (no network, or the public API's hourly limit): said as such.
+                self.assertEqual((done.returncode, body['ok'], body['error']['code']), (1, False, 'check_incomplete'))
+                self.assertEqual(tree(app), before)
+                self.skipTest('the public release record could not be read: ' + body['error']['message'])
+            self.assertEqual((body['ok'], body['installed'], body['app_running']), (True, False, False), words)
+            self.assertIn(body['state'], ('ahead_of_channel', 'up_to_date'))
+            self.assertTrue(body['message'] and body['latest']['version'])
+            self.assertNotIn('dry_run', body)   # there is no plan to show: nothing is newer
+        self.assertIn('不需要升级', self.photodesk('update', 'install', '--yes').stdout)
+        self.assertEqual(tree(app), before)
+
+        older = self.root / 'older/PhotoDesk.app'
+        shutil.rmtree(older.parent, ignore_errors=True)
+        (older / 'Contents/MacOS').mkdir(parents=True)
+        shutil.copy2(self.binary, older / 'Contents/MacOS/PhotoDesk')
+        (older / 'Contents/Info.plist').write_bytes(plistlib.dumps({
+            'CFBundleIdentifier': BUNDLE, 'CFBundleExecutable': 'PhotoDesk', 'CFBundlePackageType': 'APPL',
+            'CFBundleShortVersionString': '0.9', 'CFBundleVersion': '1', 'LSUIElement': True}))
+        was = tree(older)
+        there = dict(self.env, PHOTODESK_NATIVE=str(older / 'Contents/MacOS/PhotoDesk'))
+        check = self.call('update', 'check', env=there)
+        self.assertEqual((check['current'], check['state'], check['update_available']), ({'version': '0.9', 'build': '1'}, 'update_available', True))
+        # No developer identity on this bundle (nor on the installed PhotoDesk): not replaceable from the public channel.
+        self.assertEqual((check['upgrade']['in_app'], check['upgrade']['command']), (False, None))
+        self.assertIn(check['upgrade']['button'], ('下载新版…', None))
+        for words in (('--dry-run',), (), ('--yes',)):
+            refused = self.call('update', 'install', *words, expect=1, env=there)
+            self.assertEqual((refused['command'], refused['error']['code'], refused['current']), ('update install', 'manual_install', {'version': '0.9', 'build': '1'}), words)
+            self.assertTrue((refused['download_url'] or refused['release_url'] or '').startswith('https://'), refused)
+            self.assertEqual(refused['latest']['version'], check['latest']['version'])
+            self.assertNotIn('installed', refused)
+        self.assertEqual((tree(older), tree(app)), (was, before))
+        self.assertEqual(sorted(path.name for path in older.parent.iterdir()), ['PhotoDesk.app'])  # no backup, no second bundle
+        self.assertFalse(self.support.exists() or self.cloud.exists())
+
+    def test_shortcuts_set_stores_what_recording_the_same_keys_would(self):
+        """给动作设一个组合键, written out instead of pressed: PhotoShortcuts.set decides, and what is stored is what the
+        window's recorder stores (key code, Carbon modifiers, key name). Nothing is registered with the system."""
+        done = self.call('shortcuts', 'set', 'pause', 'ctrl+opt+p')
+        self.assertEqual((done['command'], done['action'], done['label'], done['scope'], done['changed']),
+                         ('shortcuts set', 'pause', '⌃⌥P', 'application', True))
+        saved = self.stored(SHORTCUTS)
+        code = saved['pause']['chord']['code']   # the P key of this Mac's keyboard layout (35 on ANSI layouts)
+        self.assertTrue(0 <= code < 128, saved)
+        self.assertEqual(saved, {'pause': chord(code, 'P')})
+        rows = {row['action']: row for row in self.call('shortcuts')['shortcuts']}
+        self.assertEqual((rows['pause']['binding']['label'], rows['pause']['status'], rows['pause']['conflict']), ('⌃⌥P', '已保存 · 仅 PhotoDesk 内', None))
+        self.assertIn('pause · 暂停 / 恢复自动整理 · ⌃⌥P', self.photodesk('shortcuts').stdout)
+        # The same again changes nothing. The symbols the window shows are read too; a scope moves the binding, and a
+        # later set that names no scope keeps the one the binding has.
+        self.assertIs(self.call('shortcuts', 'set', 'pause', 'ctrl+opt+p')['changed'], False)
+        moved = self.call('shortcuts', 'set', 'pause', '⌃⌥P', 'global')
+        self.assertEqual((moved['scope'], moved['changed'], self.stored(SHORTCUTS)), ('global', True, {'pause': chord(code, 'P', scope='global')}))
+        kept = self.call('shortcuts', 'set', 'pause', 'control+option+shift+p')
+        self.assertEqual((kept['label'], kept['scope'], kept['changed']), ('⌃⌥⇧P', 'global', True))
+        # Named keys carry the key code the recorder stores for them, whatever the keyboard layout.
+        self.assertEqual(self.call('shortcuts', 'set', 'preview', 'opt+space')['label'], '⌥Space')
+        self.assertEqual(self.call('shortcuts', 'set', 'next', 'ctrl+right')['label'], '⌃→')
+        saved = self.stored(SHORTCUTS)
+        self.assertEqual((saved['preview'], saved['next']), (chord(49, 'Space', modifiers=2048), chord(124, '→', modifiers=4096)))
+        self.assertEqual(self.call('shortcuts')['bound'], 3)
+        # The window's rules decide, and a refusal leaves what was stored.
+        for words, reason in ((('search', 'f'), '至少包含'), (('search', 'shift+f'), '至少包含'), (('search', 'cmd+c'), '标准菜单'),
+                              (('search', 'ctrl+opt+shift+p'), '暂停 / 恢复自动整理'), (('search', 'ctrl+opt+f', 'global'), '只能在 PhotoDesk 窗口内')):
+            refused = self.call('shortcuts', 'set', *words, expect=1)
+            self.assertEqual(refused['error']['code'], 'rejected', words)
+            self.assertIn(reason, refused['error']['message'])
+            self.assertIn('原绑定保留', refused['error']['message'])
+        for words in (('pause',), ('nosuch', 'ctrl+opt+p'), ('pause', 'hyper+p'), ('pause', 'ctrl+opt+'), ('pause', 'ctrl+opt+pp'),
+                      ('pause', 'ctrl+opt+p', 'everywhere'), ('pause', 'ctrl+opt+p', 'global', 'extra')):
+            self.assertEqual(self.call('shortcuts', 'set', *words, expect=2)['error']['code'], 'usage', words)
+        self.assertEqual(self.stored(SHORTCUTS), saved)
+        self.assertEqual(self.stored(KEY), PREFERENCES)  # the other settings are not touched
+        # scope on an action without a binding now says how to give it one.
+        self.assertIn('photodesk shortcuts set refresh', self.call('shortcuts', 'scope', 'refresh', 'global', expect=1)['error']['message'])
+
+    def test_the_permissions_probe_reads_the_grants_with_preflights_only(self):
+        """What `photodesk doctor` asks the app executable for: PhotoDesk's own 照片 grant and the caller's 自动化 grant
+        toward “照片”, as one JSON line. Checked here: the shape, that a reading told as PhotoDesk's own really was read
+        by this executable as its own responsible program, that it returns without waiting on anything, and that the
+        source keeps to the two calls that cannot ask (the status read, and the Apple-event preflight told not to)."""
+        began = time.monotonic()
+        done = self.direct('--permissions-probe')
+        took = time.monotonic() - began
+        self.assertEqual((done.returncode, done.stderr), (0, ''))
+        body = json.loads(done.stdout)
+        self.assertEqual(set(body), {'photos', 'automation'})
+        photos, caller = body['photos'], body['automation']['caller']
+        self.assertEqual(set(photos), {'status', 'granted', 'own_identity', 'from'})
+        self.assertIn(photos['status'], ('authorized', 'limited', 'denied', 'restricted', 'not_determined', 'unknown'))
+        self.assertIn(photos['from'], ('probe', 'app', None))
+        if photos['from'] == 'probe':
+            self.assertIs(photos['own_identity'], True, photos)
+            self.assertEqual(photos['granted'], photos['status'] in ('authorized', 'limited'))
+        self.assertIn(caller['state'], ('allowed', 'denied', 'not_asked', 'target_not_running', 'unknown', 'no_answer'))
+        self.assertLess(took, 60)
+        access = (ROOT / 'Sources/AgentCommands.swift').read_text().split('enum PhotoAccess {')[1].split('\nenum PhotoChord {')[0]
+        self.assertNotIn('requestAuthorization', access)
+        self.assertIn('PHPhotoLibrary.authorizationStatus(for: .readWrite)', access)
+        self.assertIn('AEDeterminePermissionToAutomateTarget(&target, typeWildCard, typeWildCard, false)', access)
+        # doctor tells that reading row by row, and a reading that is missing or not PhotoDesk's own is never a pass.
+        rows = dict((name, (ok, detail)) for name, ok, detail in desk_cli.permission_checks(body))
+        if photos['from'] == 'probe' and photos['status'] in desk_cli.PHOTOS_ACCESS:
+            self.assertIs(rows['photos_access'][0], desk_cli.PHOTOS_ACCESS[photos['status']][0])
+        else:
+            self.assertIsNone(rows['photos_access'][0])
+        self.assertIn(rows['photos_automation'][0], (True, False, None))
+
+    def test_start_launches_hidden_and_quit_ends_it(self):
+        """`photodesk start` really starts this throwaway bundle through the system (a test bundle identifier, no Dock
+        icon, the marked synthetic library, the stand-in engine): it comes up hidden and not activated, none of its
+        windows reaches the screen, the front app is not it, and the commands that need a running app find it. `quit`
+        ends it the way ⌘Q does and waits until the process has gone."""
+        live = dict(self.env, PHOTODESK_BACKGROUND='1', PHOTODESK_LIBRARY=str(self.demo))
+        self.assertIs(self.call('quit', env=live)['quit'], False)   # nothing is running yet
+        started = self.call('start', env=live)
+        pid = started['pid']
+        self.addCleanup(lambda: alive(pid) and os.kill(pid, signal.SIGKILL))
+        self.assertEqual((started['command'], started['started'], started['app_running'], started['hidden'], started['active']),
+                         ('start', True, True, True, False), started)
+        self.assertEqual(Path(started['app_path']).resolve(), self.binary.parents[2])
+        self.assertEqual(started['check_with'], 'photodesk automation status')
+        self.assertEqual(windows_on_screen(pid), [])
+        self.assertNotEqual(front_pid(), pid)
+        status = self.call('automation', env=live)
+        self.assertEqual((status['app_running'], status['pid'], status['hidden'], status['active']), (True, pid, True, False))
+        # Already running: not started again, its window is not touched.
+        again = self.call('start', env=live)
+        self.assertEqual((again['started'], again['app_running'], again['pid'], again['hidden']), (False, True, pid, True))
+        self.assertIn('已在运行', self.photodesk('start', env=live).stdout)
+        # While it runs it owns the bindings.
+        self.assertEqual(self.call('shortcuts', 'set', 'pause', 'ctrl+opt+p', expect=1, env=live)['error']['code'], 'app_running')
+        self.assertEqual(windows_on_screen(pid), [])
+        self.assertNotEqual(front_pid(), pid)
+        done = self.call('quit', env=live)
+        self.assertEqual((done['command'], done['quit'], done['app_running'], done['pid']), ('quit', True, False, pid), done)
+        self.assertNotIn('quit_accepted', done)   # the app's word to the command, not part of the result
+        self.assertFalse(alive(pid))
+        self.assertIs(self.call('automation', env=live)['app_running'], False)
+        self.assertIs(self.call('quit', env=live)['quit'], False)
+        # And with the app gone the binding can be set.
+        self.assertIs(self.call('shortcuts', 'set', 'pause', 'ctrl+opt+p', env=live)['changed'], True)
+
     def test_a_running_app_follows_the_command_and_never_writes_the_old_value_back(self):
         self.follow()
 
@@ -520,7 +756,13 @@ class LifecycleCommandTests(Chain):
         self.assertEqual((refused['error']['code'], refused['automatic_enabled'], refused['automatic_setting']), ('automatic_off', False, False))
         last = seen()
         self.assertEqual((last['policy_prohibited'], last['windows_on_screen']), (True, 0))
-        self.stop_app(process)
+        # An app that is already running is found, not started again; `quit` ends it by its own ⌘Q path.
+        found = self.call('start', env=live)
+        self.assertEqual((found['started'], found['app_running'], found['pid']), (False, True, process.pid))
+        ended = self.call('quit', env=live)
+        self.assertEqual((ended['quit'], ended['app_running'], ended['pid']), (True, False, process.pid))
+        self.assertEqual(process.wait(timeout=15), 0)
+        self.followers.remove(process)
         gone = self.call('automation', env=live)
         self.assertEqual((gone['app_running'], gone['automatic_setting']), (False, False))
         self.assertEqual(self.call('automation', 'resume', expect=1, env=live)['error']['code'], 'app_not_running')
@@ -582,13 +824,27 @@ class AssembledBundleTests(Chain):
         for words, code in ((('config', 'status', '--json'), 0), (('shortcuts', '--json'), 0), (('login', 'status', '--json'), 0),
                             (('automation', 'status', '--json'), 0), (('cancel', '--json'), 0),
                             (('config', 'status', '--no-such', '--json'), 2), (('shortcuts', 'bogus', '--json'), 2),
-                            (('login', 'on', '--json', '--dry-run'), 0), (('config', '--help'), 0), (('cancel', '--help'), 0)):
+                            (('login', 'on', '--json', '--dry-run'), 0), (('config', '--help'), 0), (('cancel', '--help'), 0),
+                            (('update', 'install', '--no-such', '--json'), 2), (('shortcuts', 'set', 'pause', '--json'), 2),
+                            (('start', 'now', '--json'), 2), (('start', '--json'), 1), (('quit', 'now', '--json'), 2),
+                            (('start', '--help'), 0), (('quit', '--help'), 0), (('update', '--help'), 0)):
             ours, theirs = self.photodesk(*words), self.direct(*words)
             self.assertEqual((ours.returncode, ours.stdout, ours.stderr), (theirs.returncode, theirs.stdout, theirs.stderr), words)
             self.assertEqual(ours.returncode, code, (words, ours.stdout, ours.stderr))
         status = self.call('config', 'status')
         self.assertEqual((status['sync_enabled'], status['keys']), (False, ['defaults.' + KEY]))
+        self.assertEqual(status['sync_status'], {'text': OFF, 'at': None, 'from': 'derived', 'live': False})
         self.assertEqual(self.call('config', 'status', '--no-such', expect=2)['error']['code'], 'usage')
+        self.assertEqual(self.call('update', 'install', '--no-such', expect=2)['error']['code'], 'usage')
+        # `start` never launches from a run that names isolation variables without being the complete isolated one,
+        # and `shortcuts set` writes the test domain through the frozen engine.
+        self.assertEqual(self.call('start', expect=1)['error']['code'], 'isolation_incomplete')
+        self.assertEqual(self.call('shortcuts', 'set', 'pause', 'ctrl+opt+p')['label'], '⌃⌥P')
+        self.assertEqual(self.call('shortcuts')['bound'], 1)
+        # doctor asks the bundle's own executable for the system's grants; whatever it reads, the two rows are there.
+        doctor = json.loads(self.photodesk('doctor', '--json').stdout)
+        self.assertEqual(set(doctor['permissions']), {'photos_access', 'photos_automation'})
+        self.assertTrue({'photos_access', 'photos_automation'} <= {check['name'] for check in doctor['checks']})
         self.assertEqual(self.call('login', 'on', '--yes', expect=1)['error']['code'], 'isolated_run')
         self.assertEqual(self.call('shortcuts')['domain'], self.suite)
         top = self.photodesk('--help').stdout

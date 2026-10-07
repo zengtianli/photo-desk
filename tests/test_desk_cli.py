@@ -394,10 +394,18 @@ class AgentCommands(unittest.TestCase):
         self.assertEqual(set(settings['preferences']), set(preferences.DEFAULTS))
         doctor = self.json_cli('doctor')
         self.assertTrue(all(c['ok'] for c in doctor['checks'] if c['required']))
-        notes = {c['name']: c for c in doctor['checks'] if c['ok'] is None}
-        # Informational rows are never reported as verified.
-        self.assertEqual(set(notes), {'app_running', 'photos_automation'})
-        self.assertFalse(any(c['required'] for c in notes.values()))
+        rows = {c['name']: c for c in doctor['checks']}
+        # app_running only tells; the two grants are read from the system by the app executable (never a prompt),
+        # and where they could not be read they say so instead of passing. None of the three decides `ok`.
+        self.assertIsNone(rows['app_running']['ok'])
+        for name in ('photos_access', 'photos_automation'):
+            self.assertIn(rows[name]['ok'], (True, False, None), rows[name])
+            self.assertTrue(rows[name]['detail'])
+            if rows[name]['ok'] is None:
+                self.assertIn('未检查', rows[name]['detail'])
+        self.assertFalse(any(rows[name]['required'] for name in ('app_running', 'photos_access', 'photos_automation')))
+        self.assertEqual(set(doctor['permissions']), {'photos_access', 'photos_automation'})
+        self.assertEqual({c['name'] for c in doctor['checks'] if c['ok'] is None} - {'photos_access', 'photos_automation'}, {'app_running'})
         self.assertIsInstance(doctor['app_running'], bool)
 
     def test_07_cli_only_tools_speak_json(self):
@@ -493,6 +501,37 @@ class SettingsCommand(unittest.TestCase):
             self.assertEqual(refused.exit_code, 1)
             self.assertIn('正在运行', json.loads(refused.stdout)['error'])
         self.assertEqual(preferences.load(self.store)[0]['batchSize'], 24)
+
+
+class PermissionChecks(unittest.TestCase):
+    """doctor's two grant rows from what the app executable read: a grant passes only when the system says so, a
+    reading that is missing or not PhotoDesk's own is told as unread, never as a pass."""
+
+    def rows(self, grants):
+        return {name: (ok, detail) for name, ok, detail in desk_cli.permission_checks(grants)}
+
+    def grants(self, status, own=True, automation='allowed'):
+        return {'photos': {'status': status, 'granted': status in ('authorized', 'limited'), 'own_identity': own, 'from': 'probe'},
+                'automation': {'caller': {'state': automation, 'code': 0}, 'app': None}}
+
+    def test_each_reading_is_told_as_it_is(self):
+        for status, ok in (('authorized', True), ('limited', True), ('denied', False), ('restricted', False), ('not_determined', False)):
+            self.assertIs(self.rows(self.grants(status))['photos_access'][0], ok, status)
+        for state, ok in (('allowed', True), ('denied', False), ('not_asked', False), ('target_not_running', None), ('no_answer', None)):
+            row = self.rows(self.grants('authorized', automation=state))['photos_automation']
+            self.assertIs(row[0], ok, state)
+            self.assertEqual('未检查' in row[1], ok is None, row)
+
+    def test_an_unread_or_foreign_reading_never_passes(self):
+        for grants in (None, {}, {'photos': {'status': 'unknown'}}, self.grants('authorized', own=False), self.grants('authorized', own=None)):
+            ok, detail = self.rows(grants)['photos_access']
+            self.assertIsNone(ok, grants)
+            self.assertIn('未检查', detail)
+        self.assertIsNone(self.rows(None)['photos_automation'][0])
+
+    def test_no_app_executable_means_unread(self):
+        with patch.object(desk_cli, 'app_binary', return_value=None):
+            self.assertIsNone(desk_cli.app_permissions())
 
 
 if __name__ == '__main__':

@@ -584,7 +584,7 @@ def dispatch(args=None, stdin=None):
     if args or stdin.isatty():
         import desk_cli
         if args and args[0] in desk_cli.APP_VERBS:
-            # The app's own commands (config, update, shortcuts, login, automation, cancel): the app executable
+            # The app's own commands (config, update, shortcuts, login, automation, cancel, start, quit): the app executable
             # answers; this process only passes the words on and the result back.
             return desk_cli.app_command(list(args))
         from photocli.cli import cli, run

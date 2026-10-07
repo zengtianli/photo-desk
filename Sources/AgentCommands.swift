@@ -1,10 +1,14 @@
-// The commands that belong to the app itself: `photodesk config | update | shortcuts | login | automation | cancel`.
+// The commands that belong to the app itself:
+// `photodesk config | update | shortcuts | login | automation | cancel | start | quit`.
 // The frozen engine (backend/desk_cli.py, APP_VERBS) starts this executable with the words after `photodesk` and
 // brings its stdout, stderr and exit code back unchanged. PhotoDeskEntry.main answers before any NSApplication
 // exists: no window, no Dock icon, no prompt, no hotkey registration. A PhotoDesk that is already running is not
-// restarted; it follows through AppLifecycleCLI.follow and answers `automation` / `cancel` through PhotoRemote.
+// restarted; it follows through AppLifecycleCLI.follow and answers `automation` / `cancel` / `quit` through
+// PhotoRemote. `start` is the one command that launches the app: hidden and not activated.
+// `--permissions-probe` (PhotoAccess) is what `photodesk doctor` asks for the system's grants; it never prompts.
 import AppKit
 import Carbon.HIToolbox
+import Photos
 import ServiceManagement
 
 /// One factory for the「配置与更新…」window and the `photodesk config` / `photodesk update` commands.
@@ -87,6 +91,10 @@ enum PhotoRemote {
                 guard let data = try? JSONSerialization.data(withJSONObject: reply, options: [.sortedKeys]) else { return }
                 DistributedNotificationCenter.default().postNotificationName(Notification.Name(channel + ".reply"), object: String(decoding: data, as: UTF8.self),
                                                                              userInfo: nil, deliverImmediately: true)
+                // 退出: the reply first, then the app's own ⌘Q path (applicationShouldTerminate cancels a task in
+                // progress and stops the product controls). Never while the library is being written: that path
+                // would put up an alert, and a command must not.
+                if reply["quit_accepted"] as? Bool == true { DispatchQueue.main.async { NSApp.terminate(nil) } }
             }
         }
     }
@@ -95,11 +103,14 @@ enum PhotoRemote {
         ["pid": Int(ProcessInfo.processInfo.processIdentifier), "automatic_setting": model.preferences.automatic,
          "automatic_enabled": model.automaticEnabled, "organizing": model.organizing,
          "organization_status": model.organizationStatus, "organization_error": model.organizationError ?? NSNull(),
-         "busy": model.busy, "applying": model.applying, "task_status": model.status]
+         "busy": model.busy, "applying": model.applying, "task_status": model.status,
+         "active": NSApp.isActive, "hidden": NSApp.isHidden]
     }
 
     static func perform(_ action: String, on model: PhotoDeskModel) -> [String: Any] {
-        var extra: [String: Any] = ["action": action, "was_enabled": model.automaticEnabled, "was_busy": model.busy]
+        // The 照片 grant is read only when a command asks (a preflight, never a prompt), not on every state reading.
+        var extra: [String: Any] = ["action": action, "was_enabled": model.automaticEnabled, "was_busy": model.busy,
+                                    "photos_access": PhotoAccess.own()]
         switch action {
         case "status": break
         case "pause": model.pauseAutomation()
@@ -107,6 +118,7 @@ enum PhotoRemote {
         case "cancel":
             extra["cancel_requested"] = model.busy && !model.applying
             model.cancel()
+        case "quit": extra["quit_accepted"] = !model.applying
         default: extra["unknown_action"] = true
         }
         return state(model).merging(extra) { _, new in new }
@@ -138,10 +150,191 @@ private final class StoredKeys: PhotoKeyRegistration {
     func unregister(_ id: UInt32) {}
 }
 
+/// What the system has granted, read without ever asking: the 照片 grant behind the window's「照片访问权限」button
+/// and the 自动化 grant to control “照片”. Both readings are preflights; neither can put up a prompt.
+///
+/// The system keeps a grant per responsible program. A command typed in a terminal is the terminal's child, so what
+/// it reads is the terminal's grant, not PhotoDesk's. `disclaimed()` therefore starts this executable once more as
+/// its own responsible program (the way the Finder or `open` starts the app) and lets that child read; the child
+/// reports whether it really is its own (`own_identity`), and a reading that is not PhotoDesk's is never passed off
+/// as one.
+enum PhotoAccess {
+    static let word = "--permissions-probe"
+    private static let ownWord = "--own"
+    private static let everything = UnsafeMutableRawPointer(bitPattern: -2)   // RTLD_DEFAULT
+
+    /// nil: this system has no way to tell.
+    static func ownIdentity() -> Bool? {
+        typealias Responsible = @convention(c) (pid_t) -> pid_t
+        guard let symbol = dlsym(everything, "responsibility_get_pid_responsible_for_pid") else { return nil }
+        return unsafeBitCast(symbol, to: Responsible.self)(getpid()) == getpid()
+    }
+
+    /// This process's 照片 grant (what PHPhotoLibrary would give it), without asking.
+    static func own() -> [String: Any] {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        let name: String
+        switch status {
+        case .authorized: name = "authorized"
+        case .limited: name = "limited"
+        case .denied: name = "denied"
+        case .restricted: name = "restricted"
+        case .notDetermined: name = "not_determined"
+        @unknown default: name = "unknown"
+        }
+        return ["status": name, "granted": status == .authorized || status == .limited, "own_identity": ownIdentity().map { $0 as Any } ?? NSNull()]
+    }
+
+    /// May this process's responsible program send Apple events to “照片”? askUserIfNeeded is false: no prompt, and
+    /// “照片” is never started (the system only answers for a running target).
+    static func automation() -> [String: Any] {
+        final class Box: @unchecked Sendable { var code: OSStatus? }
+        let box = Box(), done = DispatchSemaphore(value: 0)
+        DispatchQueue.global().async {
+            var target = AEAddressDesc()
+            let bundle = "com.apple.Photos"
+            guard bundle.withCString({ AECreateDesc(typeApplicationBundleID, $0, strlen($0), &target) }) == noErr else { done.signal(); return }
+            box.code = AEDeterminePermissionToAutomateTarget(&target, typeWildCard, typeWildCard, false)
+            AEDisposeDesc(&target)
+            done.signal()
+        }
+        // A target that does not respond must not hang a read command.
+        guard done.wait(timeout: .now() + 3) == .success, let code = box.code else { return ["state": "no_answer", "code": NSNull()] }
+        let state: String
+        switch Int(code) {
+        case 0: state = "allowed"
+        case -1743: state = "denied"                 // errAEEventNotPermitted
+        case -1744: state = "not_asked"              // errAEEventWouldRequireUserConsent
+        case -600: state = "target_not_running"      // procNotFound
+        default: state = "unknown"
+        }
+        return ["state": state, "code": Int(code)]
+    }
+
+    /// This executable started as its own responsible program, reading its own grants. nil: it could not be started
+    /// that way here.
+    static func disclaimed() -> [String: Any]? {
+        typealias Disclaim = @convention(c) (UnsafeMutablePointer<posix_spawnattr_t?>, Int32) -> Int32
+        guard let symbol = dlsym(everything, "responsibility_spawnattrs_setdisclaim"), let path = Bundle.main.executablePath else { return nil }
+        var attributes: posix_spawnattr_t?
+        guard posix_spawnattr_init(&attributes) == 0 else { return nil }
+        defer { posix_spawnattr_destroy(&attributes) }
+        guard unsafeBitCast(symbol, to: Disclaim.self)(&attributes, 1) == 0 else { return nil }
+        var ends: [Int32] = [0, 0]
+        guard pipe(&ends) == 0 else { return nil }
+        var actions: posix_spawn_file_actions_t?
+        posix_spawn_file_actions_init(&actions)
+        defer { posix_spawn_file_actions_destroy(&actions) }
+        posix_spawn_file_actions_adddup2(&actions, ends[1], 1)
+        posix_spawn_file_actions_addclose(&actions, ends[0])
+        posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
+        var arguments: [UnsafeMutablePointer<CChar>?] = [strdup(path), strdup(word), strdup(ownWord), nil]
+        defer { for argument in arguments { free(argument) } }
+        var child: pid_t = 0
+        let started = posix_spawn(&child, path, &actions, &attributes, &arguments, environ)
+        close(ends[1])
+        guard started == 0 else { close(ends[0]); return nil }
+        // The child ends itself after five seconds at the latest (alarm), so this read always returns.
+        let data = FileHandle(fileDescriptor: ends[0], closeOnDealloc: true).readDataToEndOfFile()
+        var status: Int32 = 0
+        waitpid(child, &status, 0)
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    }
+
+    /// The child's side of `disclaimed()`: its own grants as one JSON line.
+    static func answerOwn() -> Int32 {
+        alarm(5)
+        let body: [String: Any] = ["photos": own(), "automation": automation()]
+        FileHandle.standardOutput.write((try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])) ?? Data("{}".utf8))
+        return 0
+    }
+    static func isOwnQuestion(_ words: [String]) -> Bool { words.contains(ownWord) }
+}
+
+/// A key combination written out, for `photodesk shortcuts set`: modifiers and one key joined by "+"
+/// (`ctrl+opt+p`, `cmd+shift+space`), or the symbols the window shows (`⌃⌥P`). The key code is the one this Mac's
+/// keyboard layout gives that key, so the binding is what recording the same keys in the window would store.
+enum PhotoChord {
+    private static let modifierWords: [String: Int] = [
+        "cmd": cmdKey, "command": cmdKey, "⌘": cmdKey, "ctrl": controlKey, "control": controlKey, "⌃": controlKey,
+        "opt": optionKey, "option": optionKey, "alt": optionKey, "⌥": optionKey, "shift": shiftKey, "⇧": shiftKey]
+    /// The keys PhotoKey names itself (PhotoKey.init(_ event:)), by the words a person would type.
+    private static let named: [String: (code: Int, key: String)] = [
+        "space": (kVK_Space, "Space"), "return": (kVK_Return, "Return"), "enter": (kVK_Return, "Return"), "tab": (kVK_Tab, "Tab"),
+        "delete": (kVK_Delete, "Delete"), "backspace": (kVK_Delete, "Delete"), "esc": (kVK_Escape, "Esc"), "escape": (kVK_Escape, "Esc"),
+        "left": (kVK_LeftArrow, "←"), "right": (kVK_RightArrow, "→"), "down": (kVK_DownArrow, "↓"), "up": (kVK_UpArrow, "↑"),
+        "←": (kVK_LeftArrow, "←"), "→": (kVK_RightArrow, "→"), "↓": (kVK_DownArrow, "↓"), "↑": (kVK_UpArrow, "↑")]
+    /// US (ANSI) positions, used only if the current layout cannot be read.
+    private static let ansi: [String: Int] = [
+        "A": kVK_ANSI_A, "B": kVK_ANSI_B, "C": kVK_ANSI_C, "D": kVK_ANSI_D, "E": kVK_ANSI_E, "F": kVK_ANSI_F, "G": kVK_ANSI_G,
+        "H": kVK_ANSI_H, "I": kVK_ANSI_I, "J": kVK_ANSI_J, "K": kVK_ANSI_K, "L": kVK_ANSI_L, "M": kVK_ANSI_M, "N": kVK_ANSI_N,
+        "O": kVK_ANSI_O, "P": kVK_ANSI_P, "Q": kVK_ANSI_Q, "R": kVK_ANSI_R, "S": kVK_ANSI_S, "T": kVK_ANSI_T, "U": kVK_ANSI_U,
+        "V": kVK_ANSI_V, "W": kVK_ANSI_W, "X": kVK_ANSI_X, "Y": kVK_ANSI_Y, "Z": kVK_ANSI_Z,
+        "0": kVK_ANSI_0, "1": kVK_ANSI_1, "2": kVK_ANSI_2, "3": kVK_ANSI_3, "4": kVK_ANSI_4, "5": kVK_ANSI_5, "6": kVK_ANSI_6,
+        "7": kVK_ANSI_7, "8": kVK_ANSI_8, "9": kVK_ANSI_9, "-": kVK_ANSI_Minus, "=": kVK_ANSI_Equal, "[": kVK_ANSI_LeftBracket,
+        "]": kVK_ANSI_RightBracket, "\\": kVK_ANSI_Backslash, ";": kVK_ANSI_Semicolon, "'": kVK_ANSI_Quote, ",": kVK_ANSI_Comma,
+        ".": kVK_ANSI_Period, "/": kVK_ANSI_Slash, "`": kVK_ANSI_Grave]
+
+    /// The current ASCII-capable keyboard layout, for the length of `body`; nil when it cannot be read.
+    private static func withLayout<T>(_ body: (UnsafePointer<UCKeyboardLayout>) -> T) -> T? {
+        guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let raw = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return nil }
+        let data = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue() as Data
+        return data.withUnsafeBytes { bytes in bytes.bindMemory(to: UCKeyboardLayout.self).baseAddress.map(body) }
+    }
+    /// The one character a key gives on that layout, alone or with Shift.
+    private static func character(_ code: Int, shift: Bool, on keyboard: UnsafePointer<UCKeyboardLayout>) -> String? {
+        var dead: UInt32 = 0, length = 0
+        var characters = [UniChar](repeating: 0, count: 4)
+        guard UCKeyTranslate(keyboard, UInt16(code), UInt16(kUCKeyActionDisplay), shift ? UInt32((shiftKey >> 8) & 0xFF) : 0, UInt32(LMGetKbdType()),
+                             OptionBits(kUCKeyTranslateNoDeadKeysBit), &dead, 4, &length, &characters) == noErr, length == 1 else { return nil }
+        return String(utf16CodeUnits: characters, count: 1)
+    }
+    /// Unshifted character → key code on the current layout; the main keys win over the keypad.
+    private static func layout() -> [String: Int] {
+        withLayout { keyboard in
+            var codes: [String: Int] = [:]
+            for code in 0..<128 where !(65...92).contains(code) {   // 65–92: the numeric keypad
+                guard let key = character(code, shift: false, on: keyboard)?.uppercased() else { continue }
+                if codes[key] == nil { codes[key] = code }
+            }
+            return codes
+        } ?? [:]
+    }
+    /// The name the window's recorder gives a key: NSEvent.charactersIgnoringModifiers keeps Shift, so ⇧1 is stored
+    /// as "!" there. The same here, so the label reads the same whichever way the binding was made.
+    private static func recordedName(_ code: Int, shift: Bool, written: String) -> String {
+        guard shift, let name = withLayout({ character(code, shift: true, on: $0) }) ?? nil,
+              !name.isEmpty, name.unicodeScalars.allSatisfy({ $0.value > 0x20 && $0.value != 0x7F }) else { return written }
+        return name.uppercased()
+    }
+
+    /// nil: not a combination this command can write (the caller says how to write one).
+    static func parse(_ text: String) -> PhotoKey? {
+        var modifiers = 0
+        var rest = text
+        // The window's own way of showing it: ⌃⌥⇧⌘ in front of the key.
+        while let first = rest.first, let bit = modifierWords[String(first)], rest.count > 1 { modifiers |= bit; rest.removeFirst() }
+        var parts = rest.split(separator: "+", omittingEmptySubsequences: false).map(String.init)
+        if rest.hasSuffix("++") { parts = Array(parts.dropLast(2)) + ["+"] }   // "cmd++" would mean the plus key: not offered, falls out below
+        guard let last = parts.last, !last.isEmpty else { return nil }
+        for word in parts.dropLast() {
+            guard let bit = modifierWords[word.lowercased()] else { return nil }
+            modifiers |= bit
+        }
+        if let key = named[last.lowercased()] { return PhotoKey(code: UInt32(key.code), modifiers: UInt32(modifiers), key: key.key) }
+        guard last.count == 1 else { return nil }
+        let key = last.uppercased()
+        guard let code = layout()[key] ?? ansi[key] else { return nil }
+        return PhotoKey(code: UInt32(code), modifiers: UInt32(modifiers), key: recordedName(code, shift: modifiers & shiftKey != 0, written: key))
+    }
+    static let syntax = "组合键写法：修饰键与一个键用 + 连接，如 ctrl+opt+p、cmd+shift+space；修饰键 cmd ctrl opt shift（或 ⌘⌃⌥⇧），键为字母、数字、- = [ ] \\ ; ' , . / ` 或 space return tab delete esc left right up down"
+}
+
 @MainActor
 enum PhotoCommands {
-    static let own = ["shortcuts", "login", "automation", "cancel"]
-    static func handles(_ verb: String?) -> Bool { verb.map { AppLifecycleCLI.verbs.contains($0) || own.contains($0) } ?? false }
+    static let own = ["shortcuts", "login", "automation", "cancel", "start", "quit"]
+    static func handles(_ verb: String?) -> Bool { verb.map { AppLifecycleCLI.verbs.contains($0) || own.contains($0) || $0 == PhotoAccess.word } ?? false }
 
     private struct Failure: Error {
         let exit: Int32, code: String, message: String
@@ -154,6 +347,7 @@ enum PhotoCommands {
     /// `words` starts at the verb: ["shortcuts", "--json"]. Returns the exit code.
     static func run(_ words: [String]) -> Int32 {
         let verb = words[0], json = words.contains("--json")
+        if verb == PhotoAccess.word { return PhotoAccess.isOwnQuestion(words) ? PhotoAccess.answerOwn() : permissions() }
         if AppLifecycleCLI.handles(verb) {
             // The help names no setting, so it is answered whatever the environment says.
             if words.contains("--help") || words.contains("-h") { return AppLifecycleCLI.run(words, product: PhotoLifecycle.product(nil)) }
@@ -179,6 +373,8 @@ enum PhotoCommands {
             case "automation":
                 command = "automation " + (sub ?? "status")
                 result = try automation(p)
+            case "start": result = try start(p)
+            case "quit": result = try quit(p)
             default: result = try cancel(p)
             }
             if json {
@@ -223,7 +419,7 @@ enum PhotoCommands {
             guard p.positionals.count <= 1, p.flags.isSubset(of: ["--json"]) else { throw Failure.usage(usage("shortcuts")) }
             return listing()
         }
-        guard ["scope", "clear"].contains(sub) else { throw Failure.usage(usage("shortcuts")) }
+        guard ["set", "scope", "clear"].contains(sub) else { throw Failure.usage(usage("shortcuts")) }
         func action(_ raw: String) throws -> PhotoAction {
             guard let action = PhotoAction(rawValue: raw) else {
                 throw Failure.usage("没有动作 \(raw)；可用：" + PhotoAction.allCases.map(\.rawValue).joined(separator: " "))
@@ -232,14 +428,34 @@ enum PhotoCommands {
         }
         // Parse first, refuse second: a mistyped command is a usage error whether or not the app is running.
         var change: (() throws -> [String: Any])
-        if sub == "scope" {
+        if sub == "set" {
+            // The result of recording in the window (给动作设一个组合键), with the combination written out instead of
+            // pressed. The same PhotoShortcuts.set decides: its rules, its messages, the same stored value.
+            guard (3...4).contains(p.positionals.count), p.flags.isSubset(of: ["--json"]) else { throw Failure.usage(usage("shortcuts")) }
+            let target = try action(p.positionals[1])
+            guard let chord = PhotoChord.parse(p.positionals[2]) else { throw Failure.usage("认不出组合键 \(p.positionals[2])。" + PhotoChord.syntax) }
+            var named: PhotoBinding.Scope?
+            if p.positionals.count == 4 {
+                guard let scope = PhotoBinding.Scope(rawValue: p.positionals[3]) else { throw Failure.usage(usage("shortcuts")) }
+                named = scope
+            }
+            change = {
+                let before = center.binding(target)
+                // No scope named: an action that already has a binding keeps its scope, a new one is 仅 PhotoDesk 内 (the window's default).
+                let wanted = PhotoBinding(chord: chord, scope: named ?? before?.scope ?? .application)
+                guard center.set(target, to: wanted) else {
+                    throw Failure(exit: 1, code: "rejected", message: (center.errors[target.rawValue] ?? "这个组合键不能用。") + "未改动，原绑定保留。")
+                }
+                return ["action": target.rawValue, "label": wanted.chord.label, "scope": wanted.scope.rawValue, "changed": before != wanted]
+            }
+        } else if sub == "scope" {
             guard p.positionals.count == 3, p.flags.isSubset(of: ["--json"]), let scope = PhotoBinding.Scope(rawValue: p.positionals[2]) else {
                 throw Failure.usage(usage("shortcuts"))
             }
             let target = try action(p.positionals[1])
             change = {
                 guard let binding = center.binding(target) else {
-                    throw Failure(exit: 1, code: "not_bound", message: "「\(target.title)」还没有绑定快捷键；组合键要在设置窗口里按键录制，命令只改已有绑定的作用范围。")
+                    throw Failure(exit: 1, code: "not_bound", message: "「\(target.title)」还没有绑定快捷键；先用 photodesk shortcuts set \(target.rawValue) <组合键> 设一个，或在设置窗口里按键录制。")
                 }
                 let before = binding.scope
                 guard center.set(target, to: PhotoBinding(chord: binding.chord, scope: scope)) else {
@@ -263,7 +479,7 @@ enum PhotoCommands {
             }
         }
         guard !sharesSettingsWithRunningApp() else {
-            throw Failure(exit: 1, code: "app_running", message: "PhotoDesk 正在运行：快捷键保存在运行中的 App 里，会覆盖外部修改。请在设置窗口（⌘,）的“快捷键”页修改，或退出 PhotoDesk 后重试。未改动。")
+            throw Failure(exit: 1, code: "app_running", message: "PhotoDesk 正在运行：快捷键保存在运行中的 App 里，会覆盖外部修改。请在设置窗口（⌘,）的“快捷键”页修改，或退出 PhotoDesk（photodesk quit）后重试。未改动。")
         }
         let changed = try change()
         // The same UserDefaults object wrote it; a short-lived process must not exit before it reaches the store.
@@ -394,7 +610,142 @@ enum PhotoCommands {
         return Output(body: state, lines: ["已取消。" + (state["task_status"] as? String ?? "")])
     }
 
+    // MARK: start, quit — the app process itself
+
+    /// The settings a launched app must share with this command. A plain run: none (the app starts on the owner's
+    /// settings and library, as from the Dock). A run that names any isolation variable must be the complete marked
+    /// synthetic one, and then the app gets the same variables; anything in between is refused, so a test can never
+    /// start an app on the owner's data and a real run can never start one on test data.
+    private static func launchEnvironment() throws -> [String: String] {
+        let environment = ProcessInfo.processInfo.environment
+        let ours = environment.filter { $0.key.hasPrefix("PHOTODESK_") || $0.key.hasPrefix("APP_LIFECYCLE_") }
+        let isolating = ["PHOTODESK_PREFERENCES_SUITE", "PHOTODESK_DEMO_ROOT", "PHOTODESK_DATA_ROOT", "PHOTODESK_BACKGROUND", "PHOTODESK_LIBRARY",
+                         "APP_LIFECYCLE_SUPPORT_DIR", "APP_LIFECYCLE_CLOUD_DIR"]
+        guard isolating.contains(where: { ours[$0] != nil }) else { return [:] }
+        guard PhotoDeskLaunch.background else {
+            throw Failure(exit: 1, code: "isolation_incomplete", message: "这次运行带着隔离或演示用的环境变量，但不是完整的隔离运行（PHOTODESK_BACKGROUND=1、带标记的合成图库 PHOTODESK_DEMO_ROOT、其中的 PHOTODESK_DATA_ROOT、PhotoDesk.Test.* 偏好域）。未启动。")
+        }
+        return ours
+    }
+
+    private static func start(_ p: Arguments) throws -> Output {
+        guard p.positionals.isEmpty, p.flags.isSubset(of: ["--json"]) else { throw Failure.usage(usage("start")) }
+        let environment = try launchEnvironment()
+        func told(_ reply: [String: Any], started: Bool) -> Output {
+            var body = reply
+            body.removeValue(forKey: "id"); body.removeValue(forKey: "action"); body.removeValue(forKey: "was_enabled"); body.removeValue(forKey: "was_busy")
+            body["app_running"] = true; body["started"] = started; body["app_path"] = Bundle.main.bundlePath
+            body["check_with"] = "photodesk automation status"
+            let where_ = body["hidden"] as? Bool == true ? "窗口未显示" : body["active"] as? Bool == true ? "窗口在前台" : "窗口在后台"
+            return Output(body: body, lines: [(started ? "已在后台启动 PhotoDesk" : "PhotoDesk 已在运行") + "（进程 \(body["pid"] ?? "?")，\(where_)）"] + sentence(body))
+        }
+        let registered = bundleRunning()
+        if registered || peerRunning(), let reply = PhotoRemote.ask("status", timeout: 3) { return told(reply, started: false) }
+        if registered {
+            // An app with this bundle identifier runs and does not answer here (an older version, busy, or the owner's
+            // own PhotoDesk seen from an isolated run): running all the same. Opening it again would only reach that
+            // instance, so nothing is opened, hidden or changed.
+            let own = ProcessInfo.processInfo.processIdentifier
+            let pid = Bundle.main.bundleIdentifier.flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0).first { $0.processIdentifier != own }?.processIdentifier }
+            return Output(body: ["app_running": true, "started": false, "answered": false, "pid": pid.map { Int($0) as Any } ?? NSNull(), "app_path": Bundle.main.bundlePath],
+                          lines: ["PhotoDesk 已在运行，但没有应答命令（可能是旧版本，或正忙）。没有再启动一份。"])
+        }
+        let bundle = Bundle.main.bundleURL
+        guard bundle.pathExtension == "app" else {
+            throw Failure(exit: 1, code: "app_missing", message: "这个可执行文件不在 PhotoDesk.app 里（\(bundle.path)），没有可启动的 App。请从已安装的 PhotoDesk.app 运行 photodesk。")
+        }
+        // Hidden and not activated: the app runs, its window is not shown and the front app keeps the keyboard.
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        configuration.hides = true
+        configuration.addsToRecentItems = false
+        configuration.promptsUserIfNeeded = false
+        configuration.environment = environment
+        final class Box: @unchecked Sendable { var done = false; var pid: pid_t?; var error: String? }
+        let box = Box()
+        NSWorkspace.shared.openApplication(at: bundle, configuration: configuration) { app, error in
+            let pid = app?.processIdentifier, message = error?.localizedDescription
+            DispatchQueue.main.async { box.pid = pid; box.error = message; box.done = true }
+        }
+        // Uptime, not wall time (see PhotoRemote.ask).
+        let deadline = ProcessInfo.processInfo.systemUptime + 30
+        while !box.done && ProcessInfo.processInfo.systemUptime < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+        guard let pid = box.pid else {
+            throw Failure(exit: 1, code: "launch_failed", message: "系统没有启动 PhotoDesk：\(box.error ?? "30 秒内没有结果")")
+        }
+        // Started is not ready: wait until the app answers, so the next command finds it.
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            if let reply = PhotoRemote.ask("status", timeout: 1), reply["pid"] as? Int == Int(pid) { return told(reply, started: true) }
+            guard kill(pid, 0) == 0 else { throw Failure(exit: 1, code: "launch_failed", message: "PhotoDesk 启动后随即退出了（进程 \(pid)）。", extra: ["pid": Int(pid)]) }
+        }
+        throw Failure(exit: 1, code: "no_reply", message: "PhotoDesk 已启动（进程 \(pid)），但 30 秒内没有应答命令；用 photodesk automation status 再读一次。", extra: ["pid": Int(pid), "app_running": true, "started": true])
+    }
+
+    private static func quit(_ p: Arguments) throws -> Output {
+        guard p.positionals.isEmpty, p.flags.isSubset(of: ["--json"]) else { throw Failure.usage(usage("quit")) }
+        guard var state = try askApp("quit") else {
+            return Output(body: ["app_running": false, "quit": false], lines: ["PhotoDesk 未运行。"])
+        }
+        state.removeValue(forKey: "id")
+        state["check_with"] = "photodesk automation status"
+        guard state["unknown_action"] == nil else {
+            state.removeValue(forKey: "unknown_action"); state["app_running"] = true; state["quit"] = false
+            throw Failure(exit: 1, code: "unsupported", message: "运行中的 PhotoDesk 是不带这个命令的旧版本，没有退出。请在窗口里退出（⌘Q）。", extra: state)
+        }
+        // The app's own word for "I will quit now": part of the exchange, not of the result.
+        let accepted = state.removeValue(forKey: "quit_accepted") as? Bool == true
+        guard accepted else {
+            state["app_running"] = true; state["quit"] = false
+            throw Failure(exit: 1, code: "applying", message: "PhotoDesk 正在写入照片图库，写入和核对完成前不退出（窗口里这时退出也会被拦下）。", extra: state)
+        }
+        // The app replied, then quits the way ⌘Q does; wait until the process has really ended.
+        let pid = pid_t(state["pid"] as? Int ?? 0)
+        let deadline = ProcessInfo.processInfo.systemUptime + 15
+        while pid > 0 && !ended(pid) && ProcessInfo.processInfo.systemUptime < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+        let gone = pid > 0 && ended(pid)
+        state["app_running"] = !gone; state["quit"] = gone
+        guard gone else {
+            throw Failure(exit: 1, code: "quit_pending", message: "已请求退出，PhotoDesk 15 秒内还没有结束；用 photodesk automation status 再读一次。", extra: state)
+        }
+        return Output(body: state, lines: ["PhotoDesk 已退出（进程 \(pid)）。" + (state["was_busy"] as? Bool == true ? "退出前取消了进行中的任务。" : "")])
+    }
+
+    // MARK: --permissions-probe — what `photodesk doctor` reads of the system's grants
+
+    /// One JSON line: PhotoDesk's own 照片 grant and the 自动化 grants toward “照片”. Read only, never a prompt.
+    /// `photos` is PhotoDesk.app's (read by this executable as its own responsible program; a running PhotoDesk that
+    /// the system started as an app is the fallback). `automation.caller` is the grant of whoever runs this command
+    /// (the terminal: what `apply --confirm` needs), `automation.app` is PhotoDesk.app's own.
+    private static func permissions() -> Int32 {
+        var photos: [String: Any] = ["status": "unknown", "granted": NSNull(), "own_identity": NSNull(), "from": NSNull()]
+        var automation: [String: Any] = ["caller": PhotoAccess.automation(), "app": NSNull()]
+        if let own = PhotoAccess.disclaimed(), var read = own["photos"] as? [String: Any] {
+            read["from"] = "probe"
+            photos = read
+            automation["app"] = own["automation"] ?? NSNull()
+        } else if (bundleRunning() || peerRunning()), let reply = PhotoRemote.ask("status", timeout: 2), var read = reply["photos_access"] as? [String: Any] {
+            read["from"] = "app"
+            photos = read
+        }
+        let body: [String: Any] = ["photos": photos, "automation": automation]
+        write(String(decoding: (try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])) ?? Data("{}".utf8), as: UTF8.self), to: .standardOutput)
+        return 0
+    }
+
     // MARK: Plumbing
+
+    /// The process has ended. One that has exited but has not been collected by whoever started it still answers
+    /// kill(pid, 0), while the system no longer describes it (no such process), or describes it as over. An app the
+    /// system started is collected at once; one that a script started directly may not be.
+    private static func ended(_ pid: pid_t) -> Bool {
+        guard kill(pid, 0) == 0 else { return errno == ESRCH }
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        errno = 0
+        let got = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size)
+        if got == size { return info.pbi_status == 5 }   // SZOMB
+        return errno == ESRCH   // anything else (not permitted, …): still there as far as this can tell
+    }
 
     private static var domain: String { PhotoLifecycle.suite ?? Bundle.main.bundleIdentifier ?? PhotoLifecycle.productID }
     private static func bundleRunning() -> Bool {
@@ -435,9 +786,11 @@ enum PhotoCommands {
     }
     private static func usage(_ verb: String) -> String {
         switch verb {
-        case "shortcuts": return "用法：photodesk shortcuts [list] | scope <动作> application|global | clear <动作> | clear --all（都可加 --json）"
+        case "shortcuts": return "用法：photodesk shortcuts [list] | set <动作> <组合键> [application|global] | scope <动作> application|global | clear <动作> | clear --all（都可加 --json）"
         case "login": return "用法：photodesk login [status] | on|off --yes [--dry-run]（都可加 --json）"
         case "automation": return "用法：photodesk automation [status] | pause | resume（都可加 --json）"
+        case "start": return "用法：photodesk start [--json]"
+        case "quit": return "用法：photodesk quit [--json]"
         default: return "用法：photodesk cancel [--json]"
         }
     }
@@ -450,16 +803,21 @@ enum PhotoCommands {
         switch verb {
         case "shortcuts": return """
             usage: photodesk shortcuts [list] [--json]
+                   photodesk shortcuts set <动作> <组合键> [application|global] [--json]
                    photodesk shortcuts scope <动作> application|global [--json]
                    photodesk shortcuts clear <动作> [--json]
                    photodesk shortcuts clear --all [--json]
             设置窗口“快捷键”页：同一份保存的绑定、同一套规则。
             读（不写任何文件或状态）:
               shortcuts            每个动作的绑定、作用范围、冲突提示 → shortcuts[{action, title, allows_global, binding{label, key, code, modifiers, scope}, status, conflict}], bound, load_error, app_running
-            写（PhotoDesk 运行时拒绝，error.code = app_running；改完用 photodesk shortcuts 读回）:
+            写（PhotoDesk 运行时拒绝，error.code = app_running，可先 photodesk quit；改完用 photodesk shortcuts 读回）:
+              shortcuts set        给动作设一个组合键（窗口里是按键录制，这里把组合键写出来）→ action, label, scope, changed
+                                   不写作用范围时：已有绑定沿用原范围，新绑定是 application
               shortcuts scope      改已有绑定的作用范围：application 仅 PhotoDesk 内，global 全局（只有 toggleWindow、settings、pause 可全局）
               shortcuts clear      清除一个动作的绑定；--all 清除所有快捷键
             动作：\(PhotoAction.allCases.map(\.rawValue).joined(separator: " "))
+            \(PhotoChord.syntax)
+              规则同窗口：至少带 ⌘、⌃ 或 ⌥；不占用 macOS 的标准菜单与编辑快捷键；一个组合键只给一个动作。键位按这台 Mac 当前的键盘布局。
             error.code（退出码 1）：app_running · not_bound（这个动作还没有绑定）· rejected（规则不允许，原因在 message）· failed
             仅在窗口中：录制快捷键（要真人按键）。系统是否接受某个全局快捷键的注册只有运行中的 App 知道，命令报告的是保存的绑定与能从绑定本身判断的冲突。
             \(shape)
@@ -480,12 +838,34 @@ enum PhotoCommands {
                    photodesk automation pause|resume [--json]
             运行中的 PhotoDesk 的“暂停自动整理 / 继续自动整理”：由那个 App 自己执行并应答，命令不启动也不重启它。
             读（不写任何文件或状态）:
-              automation status    → app_running, automatic_setting, automatic_enabled, organizing, organization_status, organization_error, busy, applying, task_status
-                                   App 未运行时只有 app_running=false 与 automatic_setting（“打开 PhotoDesk 后自动整理”的设置）
+              automation status    → app_running, automatic_setting, automatic_enabled, organizing, organization_status, organization_error, busy, applying, task_status,
+                                   pid, hidden, active（窗口是否未显示 / 是否在前台）, photos_access{status, granted, own_identity}（运行中的 App 自己的“照片”授权，只读系统现有授权）
+                                   App 未运行时只有 app_running=false 与 automatic_setting（“打开 PhotoDesk 后自动整理”的设置）；要它运行用 photodesk start
             写（只改运行中的 App 这一次的状态，不改设置；改设置用 photodesk settings set automatic）:
               automation pause     暂停后台整理，已有结果仍可浏览 → changed, automatic_enabled=false
               automation resume    重新开始后台整理 → changed, automatic_enabled=true
             error.code（退出码 1）：app_not_running · no_reply（App 在运行但没有应答）· automatic_off（设置里关着自动整理，resume 不会开始）· failed
+            \(shape)
+            """
+        case "start": return """
+            usage: photodesk start [--json]
+            在后台启动 PhotoDesk（automation、cancel 要它在运行）：不激活、窗口不显示，前台的 App 和键盘焦点不变。
+            它是一个普通 App，启动后 Dock 里会有图标；点图标或 ⌘Tab 才显示窗口。已在运行时不再启动、不改变它的窗口。
+            → started, app_running, pid, hidden, active, app_path, check_with, automatic_setting, automatic_enabled, organizing, organization_status, organization_error, busy, applying, task_status, photos_access
+              started=false 表示本来就在运行；等到 App 能应答命令才返回。用 photodesk automation status 读回。
+            启动后是否自动整理由设置“打开 PhotoDesk 后自动整理”决定（settings set automatic）；命令返回时它可能还没开始，
+              用 photodesk automation status 读，要它立刻开始用 photodesk automation resume。
+            error.code（退出码 1）：launch_failed（系统没有启动它，或启动后随即退出）· no_reply（已启动，30 秒内没有应答）·
+              app_missing（不是从 PhotoDesk.app 里运行）· isolation_incomplete（带着隔离或演示环境变量但不完整）
+            \(shape)
+            """
+        case "quit": return """
+            usage: photodesk quit [--json]
+            退出运行中的 PhotoDesk（settings set、shortcuts set|scope|clear 要它不在运行）：与 ⌘Q 同一条路，由那个 App 自己退出。
+            有进行中的任务时先取消它（⌘Q 也是这样）；设置是自动保存的，没有会丢的未保存内容。
+            → quit, app_running, pid, was_busy, check_with；App 本来就没在运行时只有 quit=false 与 app_running=false，退出码 0。等到进程真的结束才返回。
+            error.code（退出码 1）：applying（正在写入照片图库，写完前不退出）· quit_pending（已请求，15 秒内还没结束）·
+              no_reply（App 在运行但没有应答）· unsupported（运行中的是不带这个命令的旧版本）
             \(shape)
             """
         default: return """
