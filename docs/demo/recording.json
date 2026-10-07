@@ -334,6 +334,26 @@
       ],
       "reason": "1.0.1 (50) 复核之后界面源码只有两次提交，都是共享的「配置与更新」：应用菜单新增两项、独立的配置/升级窗口及其按钮标题（Sources/PhotoDeskApp.swift 14 行、ProductControls.swift 9 行、Sources/Shared/ 三个新文件），时间线、片段选择、快速预览与重复核对建议的视图没有改动。录像只拍主窗口的这四处，不含应用菜单，沿用原录像；不作为新版耗时或系统图库写回证据。",
       "evidence": "git log --since=2026-10-01 -- Sources 仅 a1faa06、c1ee0ed；git show --stat 两次提交均不含 ContentView.swift。Mac mini 上的独立只读复核（2026-10-05 22:07）与本机逐条核对结论一致；没有抽视频帧，画面依据是本记录的 scenes。"
+    },
+    "1.0.3 (71)": {
+      "recorded_version": "1.0.1 (10)",
+      "reviewed_at": "2026-10-08",
+      "decided_by": "owner",
+      "decision": "本人 2026-10-05：「录频就用原来都好了」；2026-10-06 再明确通过过的素材不因小改重做（「太严格了，没有大修改就算了」）。沿用 2026-09-10 的实录，不重录。",
+      "reviewed_commits": [
+        "4c7908e6f91ef6c370718e67b276a6955b688e29",
+        "4439ef84cf1ac19bd621c190b967a0667e286bbd",
+        "a65c132b0a086f5aa24266f779bbcf65a4c14cdf",
+        "53cd07ce73bd1cb0000b861acfd94b6629a4fad4"
+      ],
+      "reason": "1.0.2 (56) 复核（c1ee0ed）之后到发行提交 53cd07c，界面源码范围（Sources、Info.plist、icon、PhotoDesk.xcodeproj）只有 4 次提交，逐个看过 diff：4c7908e 新增 Sources/AgentCommands.swift 与共享的 AppLifecycleCLI.swift（命令在 NSApplication 建立之前应答并退出）、PhotoDeskApp.swift 把原配置安装换成同一工厂并挂上远程命令监听、ViewModel.swift 加 adoptingStored 标志（采用已存设置时不回写）；4439ef8 只改 Sources/Shared 四个共享文件（独立的配置与更新窗口重排，窗口标题由「PhotoDesk · 配置与更新」改为「PhotoDesk 设置」）；a65c132 只改 AgentCommands.swift；53cd07c 只把 Info.plist 版本 1.0.2 改为 1.0.3。ContentView.swift、ProductControls.swift、Models.swift、BackendClient.swift、UISelfTest.swift 在这一段没有任何改动，时间线、片段选择、快速预览与重复核对建议的视图都没被碰到。同期 backend 只改命令行入口（bridge.py、desk_cli.py、photocli/cli.py），icon 没有提交。沿用原录像；不作为新版耗时或系统图库写回证据。",
+      "known_difference": [
+        "timeline 段（全部/猫/会议时间线、三个片段卡片）：这 4 次提交没有改到拍到的画面",
+        "review 段（选中片段、快速预览、重复核对建议）：这 4 次提交没有改到拍到的画面",
+        "录像没有拍、当前版本已不同的部分：应用菜单的「配置与更新…」「检查更新…」两项与独立设置窗口（4439ef8 起标题为「PhotoDesk 设置」并重排），以及 1.0.3 新增的 photodesk 命令；官网以历史参考说明标注未覆盖",
+        "录像是 1.0.1 (10) 在 2026-09-10 录的，画面内不显示版本号；页面说明仍写原录制版本与日期"
+      ],
+      "evidence": "git log c1ee0ed..53cd07c -- Sources Info.plist icon PhotoDesk.xcodeproj 仅 4c7908e、4439ef8、a65c132、53cd07c；git diff --name-only c1ee0ed 53cd07c -- Sources 为 AgentCommands.swift、PhotoDeskApp.swift、ViewModel.swift 与 Shared/ 四个文件，不含 ContentView.swift。只读源码复核，没有启动 App、没有抽视频帧、没有做离屏截图对照，画面依据是本记录的 scenes。"
     }
   }
 }
