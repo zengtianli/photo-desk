@@ -197,3 +197,88 @@ Mac 暂缺 12 项：
 - 界面里没有新增任何开关或文字。
 
 已知的小毛病：`settings set` 用 `pgrep -x PhotoDesk` 判断 App 是否在运行。现在这六个命令也是用 PhotoDesk 这个可执行文件回答的，所以两个命令恰好同时跑时，`settings set` 可能误报“正在运行”而拒绝，重试即可。没有改 `backend/preferences.py`。
+
+## 2026-10-07 傍晚 第二轮：升级命令、同步状态与三处缺口（进行中，逐步更新）
+
+本轮授权只有本人一句“继续全部做完。按照你的意思”；具体做法是执行单元按第二轮约定定的，不是本人逐条同意的。声明会话 `agentcli2-photo-desk`。这一节由接续的执行者写：前一个执行者 17:46 开工、18:05 前后随主会话重启被结束，没有留下回报，它的改动都在工作区、没有提交。
+
+进度（做完一步改一步）：
+
+- [x] 18:10–18:28 接手核对。四份共用副本（AppLifecycle / AppConfiguration / AppLifecycleUI / AppLifecycleCLI）与总部现版逐字节相同（`3033bc6f…`、`ba4d6aa1…`、`fb946d73…`、`f33393d9…`），不用再刷新。冲突副本 3 个（本文件的旧版、`perf/delivery-evidence` 的旧版、`ios/` 下一个），都比当前文件旧、内容没有只留在副本里的，也都不在编译或打包路径里，没有移动。
+- [x] 接手时的装机留底：`/Applications/PhotoDesk.app` 1.0.2 (64)，临时签名，`spctl` rejected，可执行文件 `031b8771dba48ea7…`，数据目录 1,439 个文件，PhotoDesk 未运行。
+- [x] 前一个执行者留下的源码改动逐处读过后沿用（`Sources/AgentCommands.swift`、`backend/bridge.py`、`backend/desk_cli.py`、`backend/photocli/cli.py`、两处命令清单、`tests/test_desk_cli.py`）；它没写完的 `tests/test_lifecycle_cli.py` 和 `project.yaml` 的登记由接续者补。
+- [x] 18:28 声明登记上（18:12 前后两次被双机准入挡回：`mini_authority_unreachable`，等到别的单元的声明出现才重试；被挡期间没有写本仓）。
+- [x] 基线：上次提交 `4439ef8` 的源码能编过（4 条原有的 Sendable 警告），`scripts/test.sh` 同一套命令 87 项里 1 项失败——共用副本 16:53 刷新后，引擎抄的帮助行与共用层对不上（`test_help_lines_are_the_shared_layers_own_and_reach_the_top_level_help`），其余通过。
+- [x] 补完 `tests/test_lifecycle_cli.py`（新增 4 个用例，改 5 处）与 `project.yaml` 的登记（76 → 80 项）；`CLAUDE.md` 改一行、加两行。
+- [x] 18:47 `bash scripts/test.sh` 在最终源码上通过：94 项 Python（3 项要组装包，在这里跳过，构建时跑）加 Swift 控件检查，退出 0。中途两次没过，都修了：帮助测试把“暂无命令”后面的命令摘要也算了进去（测试自己的范围写宽了）；`quit` 对一个已经退出、但启动它的进程还没回收的 App 一直等到超时（见下「quit 的一处修正」）。
+- [x] 18:47 源码提交 `a65c132`（本地，未推送），提交数 67，即构建号 67。
+- [x] 18:52 构建 1.0.2 (67)：`uv run python scripts/accept/build.py`，回执绑定 `a65c132`、工作树干净；组装包自检 3 项通过。
+- [x] 18:54 装机：`scripts/install_app.py`，PhotoDesk 当时未运行，装后没有启动。
+- [x] 18:56 验收与读回。
+
+### 结果
+
+`chapter agent-cli --json --app photo-desk`：80 项功能，命令 65、真人或窗口 14、暂缺 1，登记与帮助的问题为零（改前 76 项：59 / 14 / 3）。状态仍是“暂缺”，`chapter sop accept --app photo-desk --check agent_cli` 因此退出 1，原因只有一条：暂缺 1 项「导入验收测试图…」。
+
+装机版 `/Applications/PhotoDesk.app`：1.0.2 (64) → 1.0.2 (67)；可执行文件 `031b8771dba48ea7…` → `8240b881639e8c02…`（与构建产物、回执一致）；装前装后都是临时签名、`spctl -a -vv` 都是 rejected，等级没变；`codesign --verify --deep --strict` 通过。旧版 64 在 `~/.Trash/photodesk-install-20261007-185405-af0dd53e/PhotoDesk.app`。`/Applications` 里只有一个 PhotoDesk。
+
+这一轮登记的变化：
+
+| 界面上的项 | 改前 | 改后 |
+|---|---|---|
+| 升级到新版… / 下载新版… | 暂缺 | `photodesk update install` |
+| iCloud 配置同步状态（开关下面那句） | 暂缺 | `photodesk config status` 的 `sync_status` |
+| 给动作设置组合键 | 没有单列（被“录制快捷键”盖住） | `photodesk shortcuts set` |
+| 照片访问权限是否到位 | 没有单列，doctor 固定“未检查” | `photodesk doctor` 的 `photos_access` |
+| 打开 PhotoDesk（从程序坞或访达启动） | 没有登记 | `photodesk start` |
+| 退出 PhotoDesk | 没有登记 | `photodesk quit` |
+| 导入验收测试图… | 暂缺 | 仍暂缺，原因改写（见下） |
+
+### 各命令的事实与限制
+
+- `update install --yes [--dry-run]`：共用层的命令，引擎原样转交，转交的等待放到 900 秒（共用层自己最多 330 + 20 + 330 秒）。**本产品上它装不了新版**：PhotoDesk 是临时签名、走公开渠道，共用层规定这种情况不能由命令或窗口替换（窗口里按钮是「下载新版…」）。所以有新版时它退出 1、`error.code` 为 `manual_install`、给出安装包地址；没有新版时退出 0、`installed:false`。`confirmation_required`（缺 `--yes` 退出 2）在本产品上走不到，测试里也没有这一条。
+- `config status` 多了 `sync_status{text, at, from, live}`，其余字段没变。
+- `shortcuts set <动作> <组合键> [application|global]`：规则和存储用设置窗口那一套（`PhotoShortcuts.set`），不向系统注册快捷键。组合键写成 `ctrl+opt+p` 或窗口显示的 `⌃⌥P`；键码按这台 Mac 当前的键盘布局取；带 ⇧ 时存下的键名与窗口录制的一致（⇧1 存成 `!`）。PhotoDesk 运行时拒绝（`app_running`），和 `scope`、`clear` 一样。
+- `doctor` 多两行、多一个 `permissions`：`photos_access` 是 PhotoDesk.app 自己的“照片”授权，`photos_automation` 是当前终端控制“照片”的“自动化”授权。只用不会询问的预检，不启动“照片”；两行都不是必需项，不影响 `ok`。“照片”没在运行时系统不回答自动化那一项，照实报“未检查”。
+  - 读 PhotoDesk 自己的授权用了两个系统没有公开文档的函数（`responsibility_spawnattrs_setdisclaim`、`responsibility_get_pid_responsible_for_pid`，运行时按名字找）：系统按“负责的程序”记授权，从终端起的命令读到的会是终端的。找不到这两个函数或读到的不是 PhotoDesk 自己的，就报“未检查”，不冒充通过。系统升级后这两个函数若没了，这一行会退回“未检查”。
+- `start`：经系统隐藏启动、不激活，等到 App 能应答才返回。已在运行就不再启动。它是普通 App，Dock 里会出图标（帮助里写了）。
+- `quit`：由运行中的 App 自己走 ⌘Q 那条路；正在写入图库时拒绝（`applying`）；等进程真的结束才返回。
+- `automation status`、`cancel`、`start`、`quit` 的输出多了 `pid` 之外的 `hidden`、`active`、`photos_access`，只增不改。
+
+`quit` 的一处修正：前一个执行者写的版本用 `kill(pid, 0)` 判断进程是否结束。一个已经退出、但启动它的进程还没回收的 App 仍会应答 `kill(pid, 0)`，命令就一直等到 15 秒超时报 `quit_pending`。测试里的 App 是测试进程自己起的，正好是这种情况（实测 1 秒内已退出）。现在另看系统还认不认这个进程。系统起的 App 不受影响。
+
+「导入验收测试图…」仍暂缺，没有给命令：它经 PhotoKit 向本人的系统照片图库新建一张图（`NativePhotos.createFixture`，没授权过时会弹系统授权窗）；这张图之后只能本人在窗口里逐项确认、再点系统确认才删得掉，命令建得出、删不掉。本仓 `CLAUDE.md` 原有一条“不在用户图库无人值守执行写入测试”。它算“暂缺”还是算“产品边界、只在窗口里”，要本人定；定成后者，这个产品的这项检查就通过了。本轮没有替本人改这个归类。
+
+### 怎么验的
+
+- `bash scripts/test.sh`（18:47，最终源码）：94 项 Python 加 Swift 控件检查通过；改动前同一套是 87 项、1 项失败。
+- 新增的 4 个用例，全程隔离（换了 bundle id、带 LSUIElement 的临时包，`PhotoDesk.Test.*` 偏好域，临时目录，合成图库，替身引擎）：
+  - `update install`：临时包（1.2 build 7）比公开发行记录新，带不带 `--yes`、`--dry-run` 都是退出 0、`installed:false`；另一个旧版临时包（0.9 build 1）看到公开的新版，三种写法都是 `manual_install` 并带 https 地址；两个包的文件前后逐个相同，没有下载、没有备份、没有第二个包。这条联网读公开发行记录（与原有的 `update check` 用例同一个请求）。
+  - `shortcuts set`：存下的值与窗口录制的结构相同；规则拒绝的五种情况原绑定不变；七种写错的参数退出 2。
+  - 权限读回：输出形状；标成 PhotoDesk 自己的那次读数确实是它以自己为负责程序读的；源码里这一段没有 `requestAuthorization`，Apple 事件那一项传的是“不询问”。**不弹窗这一点靠的是这两个系统调用的约定，测试证明不了**；执行者看不到屏幕，本轮有没有出现过授权窗没有直接证据。
+  - `start` / `quit`：真的经系统启动了临时包——返回 `hidden:true`、`active:false`，窗口服务器的在屏窗口列表里这个进程是 0 个，前台 App 不是它；再 `start` 一次不重复启动；运行时 `shortcuts set` 被拒；`quit` 后进程消失。单独量过一次：`start` 0.9 秒返回，`quit` 0.7 秒返回。
+- 原有用例里加的：运行中的 App 开着同步时，`config status` 的 `sync_status` 是那个 App 此刻显示的那句（`from: app`、`live: true`）；没有 App 时是命令自己上一次同步留下的那句（`from: record`）；什么都没同步过是 `derived`。
+- 装机前先做了一个零可见风险的小实验（脚本没进仓库）：一个带 LSUIElement 的空 App 被系统隐藏启动后，它排进去的窗口不在窗口服务器的在屏列表里（窗口本身是 8×8、全透明、放在所有显示器之外）。确认之后才写了上面那个真启动的用例。
+- 装机留底与比对：`defaults export cyou.tianli.PhotoDesk` 在接手时、装机前、装机后、全部验证跑完后四次逐字节相同；`~/Library/Application Support/PhotoDesk` 1,439 个文件的 SHA-256 四次全部相同；真实偏好域里的快捷键仍是 0 个；没有留下测试偏好域文件。
+- 带 ⇧ 的键名在装机版上用测试偏好域读过一次：`ctrl+shift+1` 存成 `⌃⇧!`，`cmd+opt+shift+]` 存成 `⌥⇧⌘}`。
+- 装机版只读：`settings`、`plans`、`records`、`timeline`、`shortcuts`、`login status`、`automation status` 和两个错误参数的 `--json` 输出与装前逐字节相同、退出码相同；`doctor` 只多了 `permissions` 和 `photos_access` 一行，`config status` 只多了 `sync_status`。`photodesk --help` 有新行，“暂无命令”里只剩导入验收测试图。`update install --no-such --json` 退出 2、`usage`；`shortcuts set pause --json`、`start now --json` 退出 2；`quit --json` 在没有 App 运行时退出 0、`quit:false`。
+- 装机版在隔离环境变量下：`update install --dry-run`、`update install`、`update check` 都退出 0，当前 1.0.2 (67)、公开渠道 1.0.2 (56)、`up_to_date`；隔离目录里什么都没写。
+- 装机版整条链：`PHOTODESK_APP=/Applications/PhotoDesk.app` 跑组装包自检 3 项通过；再把装机版的可执行文件拷进临时包跑 13 项通过（含真启动与退出）。
+
+### 装后读到的一件事
+
+`photodesk doctor` 现在读到 PhotoDesk.app 的“照片”授权是 `not_determined`（还没有授权过）。装前是什么状态读不到（旧版没有这一行）。临时签名的包每次重装身份都变，系统可能不再认以前给的授权；本人下次在 PhotoDesk 里删除照片时系统可能会再问一次。这是前两轮交接里“权限是否要重新勾选，没有验证”那一条现在能读到的部分。
+
+### 没有验证的
+
+- **装机版没有真的 `start` 过，也没有对真实运行的 PhotoDesk `quit` 过。** 真启动只在临时包上做（那里走的是合成图库的后台模式，窗口是一块面板）。装机版的主窗口是 SwiftUI 的 Window：隐藏启动后它是否同样不上屏、设置开着时自动整理是否照常开始，没有实机证据。帮助里因此写的是“命令返回时可能还没开始，用 automation status 读”。
+- 带窗口的 PhotoDesk 这一轮没有打开过；上一轮“没有验证的”里关于真实窗口、真实偏好域与真实 iCloud 的几条原样保留。
+- 本产品上 `update install` 真的替换 App 的那条路走不到（见上），没有验证，也不该在这里验证。
+- “照片”在运行时的自动化授权读数（`allowed` / `denied` / `not_asked`）只有表驱动的单元测试，没有实机读数：本轮“照片”一直没开。
+
+### 没做的
+
+- `README.md` / `README_EN.md` 的命令一节仍没有同步（前两轮留下的同一条）。
+- Chapter 里其余验收（functionality、recovery、native_ui、cli_entry 等）绑定的是旧输入，等 Chapter 自己重跑；本轮只跑了 `agent_cli`。`perf/` 下由 Chapter 写的回执没有提交。
+- 没有推送、没有发行、没有跑性能测量。装机的 67 比公开发行的 56 新；本节提交之后 HEAD 再多一个文档提交。
+- `build/DerivedData/…/PhotoDesk.app`（本次构建产物，与装机版同版）按产品惯例留在 build 目录。
