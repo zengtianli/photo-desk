@@ -10,6 +10,9 @@ description: 原生照片时间线与本地整理，App 内置同源 photodesk C
 # 交付流程（SOP）事实：app_sop.py 据此检查轻量/测试、演示素材、推广页、装机与发布，字段说明见
 # ~/Dev/tools/dev/lib/tools/macapp/app_sop.py 的 SOP_KEYS。
 sop:
+  account:
+    mode: none
+    rationale: 本地照片整理应用，不创建应用账号；可选配置同步使用系统 Apple 账户，登录启动是系统登录项。
   # photodesk 在 App 包内（Contents/Resources/bin），与 GUI 同一引擎。子命令：timeline refresh audit photos
   # duplicates plan plans plan-show apply delete-check records progress settings doctor（App 功能），
   # 旧名别名 classify-plan/title-plan/triage/ocr-scan/classify-apply/title-apply，命令行工具 backup ocr-extract
