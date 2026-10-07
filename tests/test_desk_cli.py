@@ -452,6 +452,8 @@ class AgentCommands(unittest.TestCase):
         self.assertIn('doctor', listed)
         names = [feature['name'] for feature in spec['features']]
         self.assertEqual(len(names), len(set(names)))
+        window_only = text.split('仅在窗口中：')[1].split('\n\nOptions:')[0]
+        boundaries = []
         for feature in spec['features']:
             kinds = {'command', 'human', 'missing'} & set(feature)
             self.assertEqual(len(kinds), 1, feature)
@@ -461,6 +463,17 @@ class AgentCommands(unittest.TestCase):
                 self.assertIn(sub, listed, feature)
             if 'human' in feature:  # every window-only item is told to the agent in --help
                 self.assertIn(feature['name'], text, feature)
+                if feature['human'].startswith('产品边界：'):  # a boundary the product drew: help says so on that item's line
+                    lines = [line for line in window_only.splitlines() if feature['name'] in line]
+                    self.assertEqual(len(lines), 1, feature)
+                    self.assertIn('产品边界：', lines[0], feature)
+                    boundaries.append(feature['name'])
+        # 暂无命令 is the help's heading for items still missing a command: there exactly when something is missing.
+        self.assertEqual('暂无命令' in text, any('missing' in feature for feature in spec['features']))
+        # The one boundary rests on a rule this product wrote down on 2026-09-08 (CLAUDE.md), not on one drawn for
+        # this table; if that rule goes, the item is `missing` again.
+        self.assertEqual(boundaries, ['导入验收测试图…'])
+        self.assertIn('不在用户图库无人值守执行写入测试', (ROOT / 'CLAUDE.md').read_text())
 
     def test_11_readback_is_read_only_json(self):
         state = self.root / 'state'

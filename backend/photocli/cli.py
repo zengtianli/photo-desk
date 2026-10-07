@@ -87,15 +87,12 @@ HELP = """PhotoDesk · 照片台命令行：与 App 同一引擎、同一份时�
 \b
 仅在窗口中：
   确认删除（产品规定删除只在 App 内，PhotoKit 的系统确认须真人点；命令止于 delete-check）
+  导入验收测试图…（产品边界：它向本人的系统照片图库写入一张合成测试图，命令建得出、删不掉——删除要本人在窗口里逐项确认、再点系统确认；产品约定不在本人图库无人值守做写入，所以不给命令）
   完全磁盘访问权限、照片访问权限（系统授权须真人在系统设置里开；是否到位用 doctor 读）
   录制快捷键（要真人按键；把组合键写出来设置用 shortcuts set）
   上一张 / 下一张 / 关闭预览、显示主窗口、错误提示的收起、原生操作说明
   在“照片”中打开、在“照片”中查看、打开本地记录、在 Finder 显示 App
   PhotoDesk 安装与使用教程、@LIFECYCLE_WINDOW_ONLY@
-
-\b
-暂无命令：
-  导入验收测试图…（向本人的系统照片图库新建一张合成测试图；删除它只能本人在窗口里确认，命令建得出、删不掉，没有给命令）
 """.replace('@LIFECYCLE_READS@', '\n'.join(LIFECYCLE_READS)).replace('@LIFECYCLE_WRITES@', '\n'.join(LIFECYCLE_WRITES)) \
     .replace('@LIFECYCLE_WINDOW_ONLY@', LIFECYCLE_WINDOW_ONLY)
 

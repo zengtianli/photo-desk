@@ -348,18 +348,19 @@ class LifecycleCommandTests(Chain):
             self.assertIn(line + '\n', shared.stdout)       # the engine's copy of the line is the shared layer's line
             self.assertIn('\n  ' + line + '\n', top)         # and it is listed in `photodesk --help`
         self.assertIn('仅在窗口中：' + photocli.LIFECYCLE_WINDOW_ONLY + '\n', shared.stdout)
-        # The upgrade and the sentence under the switch have commands now (update install, config status): the shared
-        # help keeps no 暂无命令 line, and the product's own 暂无命令 list no longer names either of them.
+        # The upgrade and the sentence under the switch have commands now (update install, config status), and the one
+        # item left without a command, 导入验收测试图…, is a boundary the product drew long before this table: it sits
+        # under 仅在窗口中 and says so. Neither help keeps a 暂无命令 heading.
         self.assertNotIn('暂无命令', shared.stdout)
+        self.assertNotIn('暂无命令', top)
         self.assertTrue(any(line.startswith('  update install ') for line in photocli.LIFECYCLE_WRITES))
         self.assertIn('同步状态', photocli.LIFECYCLE_READS[0])
-        window_only, no_command = top.split('仅在窗口中：')[1].split('暂无命令：')
-        no_command = no_command.split('\n\nOptions:')[0]   # the 暂无命令 list itself, not the command summaries after it
+        window_only = top.split('仅在窗口中：')[1].split('\n\nOptions:')[0]   # the list itself, not the command summaries after it
         self.assertIn(photocli.LIFECYCLE_WINDOW_ONLY, window_only)
         self.assertNotIn('升级到新版', window_only)
-        self.assertIn('导入验收测试图', no_command)
-        for word in ('升级', '同步', 'update', 'config'):
-            self.assertNotIn(word, no_command)
+        boundary = [line for line in window_only.splitlines() if '导入验收测试图' in line]
+        self.assertEqual(len(boundary), 1, window_only)
+        self.assertTrue(boundary[0].strip().startswith('导入验收测试图…（产品边界：'), boundary[0])   # click indents the help body
         self.assertIn('退出码', shared.stdout)
         for verb in desk_cli.APP_VERBS:
             ours, theirs = self.photodesk(verb, '--help'), self.direct(verb, '--help')
