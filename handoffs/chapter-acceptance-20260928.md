@@ -282,3 +282,33 @@ Mac 暂缺 12 项：
 - Chapter 里其余验收（functionality、recovery、native_ui、cli_entry 等）绑定的是旧输入，等 Chapter 自己重跑；本轮只跑了 `agent_cli`。`perf/` 下由 Chapter 写的回执没有提交。
 - 没有推送、没有发行、没有跑性能测量。装机的 67 比公开发行的 56 新；本节提交之后 HEAD 再多一个文档提交。
 - `build/DerivedData/…/PhotoDesk.app`（本次构建产物，与装机版同版）按产品惯例留在 build 目录。
+
+## 2026-10-07 晚 收尾：「导入验收测试图…」记为产品边界，装机 1.0.2 (69)
+
+归类是主线定的，不是执行单元定的：上一节把“算暂缺还是算产品边界”留给本人，主线用 `git blame` 核过本仓 `CLAUDE.md` 第 21 行“不在用户图库无人值守执行写入测试”出自 2026-09-08 的提交 `30edc60`，早于这轮登记一个月，据此定为产品边界。本人没有逐条确认过这个归类。声明会话仍是 `agentcli2-photo-desk`。
+
+结果：`chapter sop accept --app photo-desk --check agent_cli` 退出 0，`chapter agent-cli --json --app photo-desk` 读回 passed——80 项，命令 65、真人或窗口 15、暂缺 0，问题 0（改前 65 / 14 / 1，状态“暂缺”）。
+
+改了四处，源码提交 `0e0ef63`（本地，未推送）：
+
+- `project.yaml`：这一项从 `missing` 改为 `human`，原因以“产品边界：”开头，写了三点——向本人的系统照片图库写入、命令建得出删不掉（删除要本人逐项确认加系统确认）、产品约定不在本人图库无人值守做写入（`CLAUDE.md`，2026-09-08 起）。
+- `backend/photocli/cli.py`：帮助里“暂无命令”一段删掉，这一项挪进“仅在窗口中”，紧跟“确认删除”，括号里以“产品边界：”开头写原因。帮助里不再有“暂无命令”这个标题。
+- `tests/test_desk_cli.py`：有暂缺项时帮助才该有“暂无命令”标题；原因以“产品边界：”开头的项，帮助里它那一行要写“产品边界：”；这样的项只有这一个，并且 `CLAUDE.md` 里那条原话还在（那条规则没了，这一项就该退回暂缺）。
+- `tests/test_lifecycle_cli.py`：原来按“暂无命令：”切帮助的那几行改成只看“仅在窗口中”一段。
+
+没改 `CLAUDE.md`、README、界面源码、`ios/`；窗口里的按钮照旧。
+
+怎么验的：
+
+- `bash scripts/test.sh`：改前 94 项 Python（3 项要组装包，跳过）加 Swift 控件检查通过；改后同样 94 项通过。中间一次没过，是新写的断言自己没算帮助正文的缩进，改了断言。
+- 构建 1.0.2 (69)：`uv run python scripts/accept/build.py`，回执绑定 `0e0ef63`、工作树干净；构建里的组装包自检之外，对构建产物单独再跑一次，3 项通过。构建号是提交数：67 之后隔着上一节的文档提交（68），所以是 69。
+- 装机：`scripts/install_app.py`，PhotoDesk 当时未运行，装后没有启动。1.0.2 (67) → 1.0.2 (69)；可执行文件 `8240b881639e8c02…` → `8c4734b18a1b60e4…`（与构建产物、回执一致）；装前装后都是临时签名、`spctl -a -vv` 都是 rejected，等级没变；`codesign --verify --deep --strict` 通过。旧版 67 在 `~/.Trash/photodesk-install-20261007-191303-807830c8/PhotoDesk.app`，`/Applications` 里只有一个 PhotoDesk。
+- 留底比对：`defaults export cyou.tianli.PhotoDesk` 与 `~/Library/Application Support/PhotoDesk` 1,439 个文件的 SHA-256，在接手时、装机前、装机后、全部验证跑完后四次都相同；没有留下测试偏好域文件。
+- 装机版只读，装前装后各跑同一组 24 条：退出码全部相同（`doctor`、`settings`、`plans`、`records`、`timeline`、`shortcuts`、`login status`、`automation status`、`config status` 为 0；`settings`、`plans` 的错误参数和不存在的命令为 1；`config status`、`shortcuts`、`shortcuts set pause`、`login maybe`、`automation stop`、`cancel now`、`start now`、`update install --no-such` 为 2）。输出只有三处不同：`--help` 多了产品边界那一行、少了“暂无命令”一段；`--version` 与 `doctor` 里的版本号。其余逐字节相同。
+
+没有验证的、没做的：
+
+- 没有启动装机版，没有点过窗口里的「导入验收测试图…」，没有向照片图库写入任何东西；这一轮没有对装机版跑组装包自检（它会无窗口地起一次装机版的可执行文件），只在构建产物上跑。上两节“没有验证的”原样保留。
+- `README.md` / `README_EN.md` 的命令一节仍没有同步；README 里“只留在 App 里的”原本就列着导入验收测试图，没有写“产品边界”四个字。
+- Chapter 里其余验收绑定的仍是旧输入，本轮只跑了 `agent_cli`；`perf/` 下由 Chapter 写的回执没有提交。没有推送、没有发行、没有跑性能测量。
+- 构建把构建产物里上一份引擎目录挪到了 `~/.Trash/photodesk-engine-20261007-191040`（`build.sh` 原有的做法）。
