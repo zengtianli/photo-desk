@@ -14,7 +14,7 @@ import product_facts  # facts.json published with the page for the portal and Ch
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-MEDIA = ['timeline.png', 'preview.png', 'timeline.mp4', 'review.mp4', 'timeline-poster.jpg', 'review-poster.jpg']
+MEDIA = ['timeline.png', 'preview.png', 'timeline.mp4', 'review.mp4', 'timeline.vtt', 'review.vtt', 'timeline-poster.jpg', 'review-poster.jpg']
 
 
 def digest(path):
@@ -96,7 +96,10 @@ def build(preview=False, output=None, keep_history=False):
     def video(name, poster):
         if name not in assets or poster not in assets:
             return '<div class="media-pending">原生窗口操作录像待采集 · 仅限本地预览</div>'
-        return f'<video controls playsinline preload="metadata" poster="{assets[poster]}"><source src="{assets[name]}" type="video/mp4">请下载视频后播放。</video>'
+        captions = Path(name).with_suffix('.vtt').name
+        if captions not in assets:
+            raise SystemExit('Actual Chinese captions are required: ' + captions)
+        return f'<video controls playsinline preload="metadata" poster="{assets[poster]}"><source src="{assets[name]}" type="video/mp4"><track kind="captions" srclang="zh-CN" label="中文字幕" default src="{assets[captions]}">请下载视频后播放。</video>'
     values = {'VERSION': release['version'], 'BUILD': str(release['build']),
               'SIZE': perf_block.size_mb(release['bytes']) if release['bytes'] else '体积待发行构建',
               'LIGHT': perf_block.standalone_section(ROOT / 'perf/lightweight.json', measured['version'].split(' ')[0] if keep_history else release['version'], '#26796f') if release['bytes'] else '',

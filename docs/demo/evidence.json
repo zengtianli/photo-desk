@@ -29,6 +29,22 @@
     {
       "path": "review-poster.jpg",
       "sha256": "1964c7c3dc854e9438bebb7a674299aa44799e74bd96fe7fbe28e759406698b0"
+    },
+    {
+      "path": "timeline.vtt",
+      "sha256": "27258c61b7fb9bebf172ddc04f886c3b854f17b8a083816652935f3a530ed503"
+    },
+    {
+      "path": "review.vtt",
+      "sha256": "ba363ef2a6440e56b50c5622151355accddae573ebe73e9b80f74619be456eaa"
     }
-  ]
+  ],
+  "captions_review": {
+    "performed_by": "agent",
+    "owner_reviewed": false,
+    "date": "2026-10-08",
+    "scope": "现有两份中文字幕与实录画面、合成输入说明核对，保留原版录像与原字幕字节",
+    "timeline_frame_seconds": 5,
+    "review_frame_seconds": 14
+  }
 }
